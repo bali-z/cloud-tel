@@ -1,6 +1,8 @@
 package com.ruoyi.rtc.domain;
 
 import java.util.Date;
+import java.util.List;
+
 import com.fasterxml.jackson.annotation.JsonFormat;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
@@ -52,6 +54,16 @@ public class SysMeeting extends BaseEntity
 
     @Excel(name = "参会人员")
     private String attendeesName;
+
+    private List<Long> attendeesUserIdList;
+
+    public List<Long> getAttendeesUserIdList() {
+        return attendeesUserIdList;
+    }
+
+    public void setAttendeesUserIdList(List<Long> attendeesUserIdList) {
+        this.attendeesUserIdList = attendeesUserIdList;
+    }
 
     public String getAttendeesName() {
         return attendeesName;

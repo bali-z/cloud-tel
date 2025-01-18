@@ -170,7 +170,20 @@
           </el-select>
         </el-form-item>
         <el-form-item label="参会人员" prop="attendees">
-          <el-input v-model="form.attendees" placeholder="请输入参会人员" />
+          <el-select
+            v-model="form.attendeesUserIdList"
+            filterable
+            multiple
+            collapse-tags
+            style="margin-left: 20px;"
+            placeholder="请选择">
+            <el-option
+              v-for="item in userList"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value">
+            </el-option>
+          </el-select>
         </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
