@@ -26,4 +26,6 @@ public class Constants {
     public static final String SIGNAL = "signal";
 
     public static final String DATA = "data";
+
+    private static final String CODE = "code";
 }
