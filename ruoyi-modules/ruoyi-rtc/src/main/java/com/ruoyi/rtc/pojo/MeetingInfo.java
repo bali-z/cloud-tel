@@ -7,6 +7,7 @@ import java.io.Serializable;
 import java.util.List;
 
 /**
+ * joinMeeting 亲求后有
  * @author dz
  */
 @Data
@@ -38,20 +39,25 @@ public class MeetingInfo implements Serializable{
      */
     private List<MeetingMember> meetingMembers;
 
-
+    /**
+     *  Join 信令后有
+     */
     @Data
     @Accessors(chain = true)
     static class MeetingMember implements Serializable {
         /**
+         *
          *  会议成员 token
          */
         private String userToken;
 
         /**
+         *
          *  会议成员 userId
          */
         private Long userId;
         /**
+         *
          * 会议成员 sessionId
          */
         private String sessionId;
