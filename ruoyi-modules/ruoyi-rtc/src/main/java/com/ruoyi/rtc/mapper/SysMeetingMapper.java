@@ -58,4 +58,6 @@ public interface SysMeetingMapper
      * @return 结果
      */
     public int deleteSysMeetingByIds(Long[] ids);
+
+    SysMeeting selectSysMeetingByMeetingId(String meetingId);
 }

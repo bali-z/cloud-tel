@@ -15,9 +15,14 @@ public class BaseMessage implements Serializable {
     private SignalType signal;
 
     /**
-     * 发送信令用户 token
+     * 发送信令连接 sessionId
      */
-    private String sendUser;
+    private String sendSessionId;
+
+    /**
+     *  接收信令连接 sessionId
+     */
+    private String recvSessionId;
 
     /**
      * 信令所属会议
@@ -29,12 +34,21 @@ public class BaseMessage implements Serializable {
      */
     private String ticket;
 
-    public String getSendUser() {
-        return sendUser;
+
+    public String getRecvSessionId() {
+        return recvSessionId;
     }
 
-    public void setSendUser(String sendUser) {
-        this.sendUser = sendUser;
+    public void setRecvSessionId(String recvSessionId) {
+        this.recvSessionId = recvSessionId;
+    }
+
+    public String getSendSessionId() {
+        return sendSessionId;
+    }
+
+    public void setSendSessionId(String sendSessionId) {
+        this.sendSessionId = sendSessionId;
     }
 
     public String getTicket() {

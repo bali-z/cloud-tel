@@ -19,7 +19,6 @@ public class SysMeeting extends BaseEntity
 {
     private static final long serialVersionUID = 1L;
 
-    /** $column.columnComment */
     private Long id;
 
     /** 会议唯一id */

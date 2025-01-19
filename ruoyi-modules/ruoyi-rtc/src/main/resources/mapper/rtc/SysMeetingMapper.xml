@@ -37,7 +37,11 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <include refid="selectSysMeetingVo"/>
         where id = #{id}
     </select>
-        
+    <select id="selectSysMeetingByMeetingId" resultType="com.ruoyi.rtc.domain.SysMeeting">
+        <include refid="selectSysMeetingVo"></include>
+        where meeting_id = #{meetingId}
+    </select>
+
     <insert id="insertSysMeeting" parameterType="SysMeeting" useGeneratedKeys="true" keyProperty="id">
         insert into sys_meeting_data
         <trim prefix="(" suffix=")" suffixOverrides=",">

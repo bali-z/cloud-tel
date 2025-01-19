@@ -9,21 +9,35 @@ import java.io.Serializable;
  */
 public class JoinMessage extends BaseMessage implements Serializable {
     /**
-     * 申请入会用户token信息
+     *  申请入会用户本系统登录后的 token
      */
-    private String applyUser;
+    private String applyUserToken;
+
+    /**
+     * 申请入会用户sessionId
+     */
+    private String applySessionId;
 
     /**
      * 会议票据信息
      */
     private String ticket;
 
-    public String getApplyUser() {
-        return applyUser;
+
+    public String getApplyUserToken() {
+        return applyUserToken;
     }
 
-    public void setApplyUser(String applyUser) {
-        this.applyUser = applyUser;
+    public void setApplyUserToken(String applyUserToken) {
+        this.applyUserToken = applyUserToken;
+    }
+
+    public String getApplySessionId() {
+        return applySessionId;
+    }
+
+    public void setApplySessionId(String applySessionId) {
+        this.applySessionId = applySessionId;
     }
 
     @Override

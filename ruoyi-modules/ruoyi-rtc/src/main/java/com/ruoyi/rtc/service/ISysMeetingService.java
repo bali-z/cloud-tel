@@ -1,7 +1,11 @@
 package com.ruoyi.rtc.service;
 
 import java.util.List;
+
+import com.ruoyi.common.core.domain.R;
+import com.ruoyi.common.core.web.domain.AjaxResult;
 import com.ruoyi.rtc.domain.SysMeeting;
+import com.ruoyi.rtc.pojo.MeetingJoinForm;
 
 /**
  * 会议管理Service接口
@@ -9,7 +13,8 @@ import com.ruoyi.rtc.domain.SysMeeting;
  * @author dz
  * @date 2025-01-18
  */
-public interface ISysMeetingService 
+@SuppressWarnings("ALL")
+public interface ISysMeetingService
 {
     /**
      * 查询会议管理
@@ -58,4 +63,8 @@ public interface ISysMeetingService
      * @return 结果
      */
     public int deleteSysMeetingById(Long id);
+
+    public R joinMeeting(MeetingJoinForm form);
+
+    public SysMeeting getMeetingByMeetingId(String meetingId);
 }
