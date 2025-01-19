@@ -18,12 +18,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static com.ruoyi.rtc.pojo.Constants.*;
+
 /**
  * 会议管理Service业务层处理
  *
  * @author dz
  * @date 2025-01-18
  */
+@SuppressWarnings("ALL")
 @Service
 public class SysMeetingServiceImpl implements ISysMeetingService {
     @Autowired
@@ -101,6 +104,12 @@ public class SysMeetingServiceImpl implements ISysMeetingService {
         return sysMeetingMapper.deleteSysMeetingById(id);
     }
 
+
+    /**
+     *  todo: 授权用的，外带将会议加入redis的功能
+     * @param form
+     * @return
+     */
     @Override
     public R joinMeeting(MeetingJoinForm form) {
         String meetingId = form.getMeetingId();
@@ -118,19 +127,18 @@ public class SysMeetingServiceImpl implements ISysMeetingService {
             return R.fail("会议已结束!");
         }
         LoginUser currentUser = SecurityUtils.getLoginUser();
-        Long userid = currentUser.getUserid();
+        Long currentUserUserid = currentUser.getUserid();
         Map<String, Object> claims = new HashMap<>();
-        claims.put("meetingId", meeting.getMeetingId());
-        claims.put("userid", meeting.getUserId());
-        claims.put("currentUserId", userid);
+        claims.put(MEETING_TICKET_ITEM_MEETING_ID, meeting.getMeetingId());
+        claims.put(MEETING_TICKET_ITEM_MEETING_OWNER_USER_ID, meeting.getUserId());
+        claims.put(MEETING_TICKET_ITEM_MEETING_MEMBER_USER_ID, currentUserUserid);
         // 会议票据
         String ticket = JwtUtils.createToken(claims);
         // 当前请求用户是 会议发起人
-        if (userid.equals(meeting.getUserId())) {
+        if (currentUserUserid.equals(meeting.getUserId())) {
             return R.ok("ticket", ticket);
         }
         // 当前请求用户 不是会议发起人
-
         // 用户没有输入密码 不下发密钥，进入会议时让管理员确认
         if(StringUtils.isEmpty(password)){
             return R.ok();

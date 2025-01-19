@@ -5,7 +5,6 @@ import com.ruoyi.common.core.utils.JwtUtils;
 import com.ruoyi.common.core.utils.StringUtils;
 import com.ruoyi.common.redis.generator.SnowflakeIdGenerator;
 import com.ruoyi.common.redis.service.RedisService;
-import com.ruoyi.common.security.utils.SecurityUtils;
 import com.ruoyi.rtc.domain.SysMeeting;
 import com.ruoyi.rtc.pojo.*;
 import com.ruoyi.rtc.service.ISysMeetingService;
@@ -20,10 +19,12 @@ import javax.websocket.OnOpen;
 import javax.websocket.Session;
 import javax.websocket.server.PathParam;
 import javax.websocket.server.ServerEndpoint;
-import java.awt.*;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+import static com.ruoyi.rtc.pojo.Constants.ONLINE_MEETING_PREFIX_KEY;
 
 /**
  * 只做信息调度交换，不完成实际的点对点视频通信
@@ -43,34 +44,35 @@ public class RtcWebSocket {
     private SnowflakeIdGenerator snowflakeIdGenerator;
 
     /**
-     * 当前webSocket连接的userToken
+     * 当前连接发过来的系统用户的登录 token
      */
-    private String userToken;
+    private String currentUserToken;
 
     /**
-     * sessionId key
+     * 当前连接 sessionId
      */
-    private String sessionId;
+    private String currentUserSessionId;
 
     /**
-     * sessionId value
+     * 当前连接的 session
      */
-    private Session session;
+    private Session currentUserSession;
 
     /**
-     *  当前 socket连接的userId
+     * 当前连接的userId
      */
     private Long currentUserId;
 
     /**
-     *  会议发起者 userId
+     * 会议发起者 userId
      */
     private Long meetingOwnerUserId;
 
     /**
-     *   会议发起者 sessionId
+     * 会议发起者 sessionId
      */
     private String meetingOwnerSessionId;
+
 
     @Autowired
     private ISysMeetingService sysMeetingService;
@@ -94,12 +96,12 @@ public class RtcWebSocket {
     public static void sendMessage(String tarketSessionId, String message) {
         try {
             RtcWebSocket tarketSocket = socketConnectionPool.get(tarketSessionId);
-            Session tarketSession = tarketSocket.getSession();
+            Session tarketSession = tarketSocket.currentUserSession;
             if (tarketSocket == null || tarketSession == null || !tarketSession.isOpen()) {
                 return;
             }
             synchronized (tarketSession) {
-                log.info("WebSocket send message to userId:{},sessionId:{},message:{}", tarketSocket.getUserToken(), tarketSessionId, message);
+                log.info("WebSocket send message to userToken:{},sessionId:{},message:{}", tarketSocket.currentUserToken, tarketSessionId, message);
                 tarketSession.getBasicRemote().sendText(message);
             }
         } catch (Exception e) {
@@ -109,19 +111,26 @@ public class RtcWebSocket {
 
 
     /**
+     * 连接创建时就获取到的信息 sessionId, userId,userToken,session
+     *
      * @param session
      * @param userId  用户 token
      */
     @OnOpen
-    public void onOpen(Session session, @PathParam("userToken") String userId) {
+    public void onOpen(Session session, @PathParam("userToken") String currentUserToken) {
         try {
             String sessionId = snowflakeIdGenerator.nextId();
-            socketConnectionPool.put(sessionId, new RtcWebSocket(userId, sessionId, session));
+            String userId = JwtUtils.getUserId(currentUserToken);
+            this.currentUserToken = currentUserToken;
+            this.currentUserSession = session;
+            this.currentUserId = Long.parseLong(userId);
+            this.currentUserSessionId = sessionId;
+            socketConnectionPool.put(sessionId, this);
             // 发送连接成功信令，并将对应 sessionId 发送给连接端
             sendMessage(sessionId, getMessageResponse(SignalType.CONNECT_SUCCESS, sessionId));
-            log.info("WebSocket connection successful userId:{},sessionId:{}", userId, sessionId);
+            log.debug("WebSocket connection successful userId:{},sessionId:{}", userId, sessionId);
         } catch (Exception exception) {
-            log.error("WebSocket connection failed userId:{},errors:{}", userId, exception.getMessage());
+            log.error("WebSocket connection failed userToken:{},errors:{}", currentUserToken, exception.getMessage());
         }
     }
 
@@ -184,7 +193,7 @@ public class RtcWebSocket {
      * 发过来信令是 Ping
      */
     private void onPing() {
-        sendMessage(sessionId, getMessageResponse(SignalType.PONG, "PONG"));
+        sendMessage(currentUserSessionId, getMessageResponse(SignalType.PONG, "PONG"));
     }
 
     /**
@@ -204,7 +213,7 @@ public class RtcWebSocket {
         if (socketConnectionPool.containsKey(recvSessionId)) {
             RtcWebSocket recvSocket = socketConnectionPool.get(recvSessionId);
             if (StringUtils.isEmpty(offerMessage.getSendSessionId())) {
-                offerMessage.setSendSessionId(sessionId);
+                offerMessage.setSendSessionId(currentUserSessionId);
             }
             // 将 offer 信息转发给目标连接
             sendMessage(recvSessionId, getMessageResponse(SignalType.OFFER, JSONObject.toJSONString(offerMessage)));
@@ -228,7 +237,7 @@ public class RtcWebSocket {
         if (socketConnectionPool.containsKey(recvSessionId)) {
             RtcWebSocket recvSocket = socketConnectionPool.get(recvSessionId);
             if (StringUtils.isEmpty(answerMessage.getSendSessionId())) {
-                answerMessage.setSendSessionId(sessionId);
+                answerMessage.setSendSessionId(currentUserSessionId);
             }
             // 将 offer 信息转发给目标连接
             sendMessage(recvSessionId, getMessageResponse(SignalType.OFFER, JSONObject.toJSONString(answerMessage)));
@@ -252,7 +261,7 @@ public class RtcWebSocket {
         if (socketConnectionPool.containsKey(recvSessionId)) {
             RtcWebSocket recvSocket = socketConnectionPool.get(recvSessionId);
             if (StringUtils.isEmpty(candidateMessage.getSendSessionId())) {
-                candidateMessage.setSendSessionId(sessionId);
+                candidateMessage.setSendSessionId(currentUserSessionId);
             }
             sendMessage(recvSessionId, getMessageResponse(SignalType.CANDIDATE, JSONObject.toJSONString(candidateMessage)));
         }
@@ -260,8 +269,8 @@ public class RtcWebSocket {
 
 
     /**
-     *  加入会议申请 信令
-     *  // 在 Join阶段可以获取到 当前用户 userId 以及当前 用户的 session
+     * 加入会议申请 信令
+     * // 在 Join阶段可以获取到 当前用户 userId 以及当前 用户的 session
      *
      * @param data
      */
@@ -279,40 +288,40 @@ public class RtcWebSocket {
         Long adminUserId = meeting.getUserId();
 
         // 会议为空 无法加入
-        if(meeting == null){
-            sendMessage(sessionId, getMessageResponse(SignalType.JOIN_REJECT, "会议不存在,请核对会议ID!"));
+        if (meeting == null) {
+            sendMessage(currentUserSessionId, getMessageResponse(SignalType.JOIN_REJECT, "会议不存在,请核对会议ID!"));
             return;
         }
-        if(StringUtils.isEmpty(applyUserToken)){
-            sendMessage(sessionId, getMessageResponse(SignalType.JOIN_REJECT, "未发送Token!"));
+        if (StringUtils.isEmpty(applyUserToken)) {
+            sendMessage(currentUserSessionId, getMessageResponse(SignalType.JOIN_REJECT, "未发送Token!"));
             return;
         }
 
         // 会议不为空
         // 会议未开始
         long currentTimeMillis = System.currentTimeMillis();
-        if(meeting.getStartTime().getTime() > currentTimeMillis){
-            sendMessage(sessionId, getMessageResponse(SignalType.JOIN_REJECT, "会议尚未开始,请稍后再试!"));
+        if (meeting.getStartTime().getTime() > currentTimeMillis) {
+            sendMessage(currentUserSessionId, getMessageResponse(SignalType.JOIN_REJECT, "会议尚未开始,请稍后再试!"));
             return;
         }
         // 会议已结束
-        if(meeting.getEndTime().getTime() < currentTimeMillis){
-            sendMessage(sessionId, getMessageResponse(SignalType.JOIN_REJECT, "会议已结束,请重新选择会议!"));
+        if (meeting.getEndTime().getTime() < currentTimeMillis) {
+            sendMessage(currentUserSessionId, getMessageResponse(SignalType.JOIN_REJECT, "会议已结束,请重新选择会议!"));
             return;
         }
         // 验证用户token是否正确
         Long userId = Long.parseLong(JwtUtils.getUserId(applyUserToken));
 
         // 当前用户是会议发起者
-        if(userId.equals(meeting.getUserId())){
+        if (userId.equals(meeting.getUserId())) {
             // 发送同意加入会议信令
             // 会议管理员票据未下发补发
             BaseMessage message = new BaseMessage();
             message.setMeetingId(meetingId);
             message.setSignal(SignalType.JOIN_RESOLVE);
-            message.setSendSessionId(sessionId);
-            if(StringUtils.isEmpty(ticket)){
-                Map<String,Object> claims = new HashMap<>();
+            message.setSendSessionId(currentUserSessionId);
+            if (StringUtils.isEmpty(ticket)) {
+                Map<String, Object> claims = new HashMap<>();
                 claims.put("meetingId", meeting.getMeetingId());
                 claims.put("userid", meeting.getUserId());
                 claims.put("currentUserId", userId);
@@ -320,11 +329,11 @@ public class RtcWebSocket {
                 message.setTicket(ticket);
             }
             // 校验成功 准备进入会议
-            sendMessage(sessionId, getMessageResponse(SignalType.JOIN_RESOLVE, JSONObject.toJSONString(message)));
+            sendMessage(currentUserToken, getMessageResponse(SignalType.JOIN_RESOLVE, JSONObject.toJSONString(message)));
             this.currentUserId = userId;
             this.meetingOwnerUserId = userId;
-            this.meetingOwnerSessionId = sessionId;
-            return ;
+            this.meetingOwnerSessionId = currentUserSessionId;
+            return;
         }
 
         // 当前用户不是会议发起者
@@ -332,15 +341,15 @@ public class RtcWebSocket {
 //        if(meeting.getAttendeesUserIdList().contains(userId)){
 //        }
         // 校验一下票据
-        if(ticket != null){
-            if(checkTicket(ticket,meeting,userId)){
+        if (ticket != null) {
+            if (checkTicket(ticket, meeting, userId)) {
                 BaseMessage message = new BaseMessage();
                 message.setMeetingId(meetingId);
                 message.setSignal(SignalType.JOIN_RESOLVE);
-                message.setSendSessionId(sessionId);
-                sendMessage(sessionId, getMessageResponse(SignalType.JOIN_RESOLVE, JSONObject.toJSONString(message)));
-                return ;
-            }else {
+                message.setSendSessionId(currentUserSessionId);
+                sendMessage(currentUserSessionId, getMessageResponse(SignalType.JOIN_RESOLVE, JSONObject.toJSONString(message)));
+                return;
+            } else {
                 // 密钥过期,让管理员审批
             }
         }
@@ -348,30 +357,43 @@ public class RtcWebSocket {
         // todo 其他情况
 
 
-
-
-
     }
 
     /**
-     *  验证票据
+     * 验证票据
+     *
      * @param ticket
      * @param meeting
      * @param userId
      * @return
      */
-    private boolean checkTicket(String ticket, SysMeeting meeting, Long rqUserId){
+    private boolean checkTicket(String ticket, SysMeeting meeting, Long rqUserId) {
         Claims claims = JwtUtils.parseToken(ticket);
-        if(claims == null){
+        if (claims == null) {
             return false;
         }
         String meetingId = claims.get("meetingId").toString();
-        String userId = claims.get("userid").toString();
+        String userId = claims.get("userId").toString();
         String currentUserId = claims.get("currentUserId").toString();
         return meetingId.equals(meeting.getMeetingId()) && userId.equals(meeting.getUserId()) && currentUserId.equals(rqUserId);
     }
 
+    /**
+     * 加入会议
+     *
+     * @param meetingId
+     */
+    private void joinMeeting(String meetingId) {
+        String key = ONLINE_MEETING_PREFIX_KEY + meetingId;
+        Boolean hasKey = redisService.hasKey(key);
+        if (hasKey) {
+            List<Object> cacheList = redisService.getCacheList(key);
 
+        }
+
+
+//        redisService.setCacheList()
+    }
 
 
     /**
@@ -395,40 +417,6 @@ public class RtcWebSocket {
                 break;
         }
         return message.toJSONString();
-    }
-
-
-    public String getUserToken() {
-        return userToken;
-    }
-
-    public void setUserToken(String userToken) {
-        this.userToken = userToken;
-    }
-
-    public String getSessionId() {
-        return sessionId;
-    }
-
-    public void setSessionId(String sessionId) {
-        this.sessionId = sessionId;
-    }
-
-    public Session getSession() {
-        return session;
-    }
-
-    public void setSession(Session session) {
-        this.session = session;
-    }
-
-    public RtcWebSocket() {
-    }
-
-    public RtcWebSocket(String userToken, String sessionId, Session session) {
-        this.userToken = userToken;
-        this.sessionId = sessionId;
-        this.session = session;
     }
 
 }
