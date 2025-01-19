@@ -32,6 +32,14 @@ public interface RemoteUserService
     public R<LoginUser> getUserInfo(@PathVariable("username") String username, @RequestHeader(SecurityConstants.FROM_SOURCE) String source);
 
     /**
+     * 通过userId查询用户信息
+     * @return 结果
+     */
+    @GetMapping("/user/info/{userId}")
+    public R<SysUser> getUserInfoById(@PathVariable("userId") Long userId, @RequestHeader(SecurityConstants.FROM_SOURCE) String source);
+
+
+    /**
      * 注册用户信息
      *
      * @param sysUser 用户信息

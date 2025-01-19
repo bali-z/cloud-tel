@@ -4,6 +4,7 @@ import lombok.Data;
 import lombok.experimental.Accessors;
 
 import java.io.Serializable;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -35,6 +36,24 @@ public class MeetingInfo implements Serializable{
      */
     private String meetingPassword;
     /**
+     *  会议开始时间
+     */
+    private Date startTime;
+    /**
+     *  会议结束时间
+     */
+    private Date endTime;
+
+    /**
+     *  会议发起人 姓名
+     */
+    private String meetingOwnerName;
+
+    /**
+     *  会议发起人头像
+     */
+    private String meetingOwnerAvatar;
+    /**
      *  会议当前在线成员
      */
     private List<MeetingMember> meetingMembers;
@@ -44,7 +63,7 @@ public class MeetingInfo implements Serializable{
      */
     @Data
     @Accessors(chain = true)
-    static class MeetingMember implements Serializable {
+    public static class MeetingMember implements Serializable {
         /**
          *
          *  会议成员 token

@@ -1,5 +1,6 @@
 package com.ruoyi.rtc.service.impl;
 
+import com.ruoyi.common.core.constant.SecurityConstants;
 import com.ruoyi.common.core.domain.R;
 import com.ruoyi.common.core.utils.DateUtils;
 import com.ruoyi.common.core.utils.JwtUtils;
@@ -12,6 +13,8 @@ import com.ruoyi.rtc.mapper.SysMeetingMapper;
 import com.ruoyi.rtc.pojo.MeetingInfo;
 import com.ruoyi.rtc.pojo.MeetingJoinForm;
 import com.ruoyi.rtc.service.ISysMeetingService;
+import com.ruoyi.system.api.RemoteUserService;
+import com.ruoyi.system.api.domain.SysUser;
 import com.ruoyi.system.api.model.LoginUser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -40,6 +43,9 @@ public class SysMeetingServiceImpl implements ISysMeetingService {
 
     @Autowired
     private RedisService redisService;
+
+    @Autowired
+    private RemoteUserService remoteUserService;
 
     /**
      * 查询会议管理
@@ -173,10 +179,14 @@ public class SysMeetingServiceImpl implements ISysMeetingService {
         if (meeting == null || meeting.getStartTime().getTime() > currentTimeMillis || meeting.getEndTime().getTime() < currentTimeMillis) {
             return;
         }
+        R<SysUser> userInfo = remoteUserService.getUserInfoById(meeting.getUserId(), SecurityConstants.INNER);
         // 封装 MeetingInfo 信息
         MeetingInfo meetingInfo = new MeetingInfo();
         meetingInfo.setMeetingId(meetingId).setMeetingTitle(meeting.getTitle())
-                .setMeetingOwnerUserId(meeting.getUserId()).setMeetingPassword(meeting.getPassword());
+                .setMeetingOwnerUserId(meeting.getUserId()).setMeetingPassword(meeting.getPassword())
+                .setStartTime(meeting.getStartTime()).setEndTime(meeting.getEndTime())
+                .setMeetingOwnerName(userInfo.getData().getUserName())
+                .setMeetingOwnerAvatar(userInfo.getData().getAvatar());
         String key = ONLINE_MEETING_PREFIX_KEY + meetingId;
         if (redisService.hasKey(key)) {
             return;
