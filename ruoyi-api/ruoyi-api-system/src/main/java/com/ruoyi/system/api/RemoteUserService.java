@@ -35,7 +35,7 @@ public interface RemoteUserService
      * 通过userId查询用户信息
      * @return 结果
      */
-    @GetMapping("/user/info/{userId}")
+    @GetMapping("/user/userInfo/{userId}")
     public R<SysUser> getUserInfoById(@PathVariable("userId") Long userId, @RequestHeader(SecurityConstants.FROM_SOURCE) String source);
 
 

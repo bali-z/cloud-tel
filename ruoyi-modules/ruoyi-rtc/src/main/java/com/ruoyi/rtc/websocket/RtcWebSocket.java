@@ -131,11 +131,14 @@ public class RtcWebSocket {
     @OnOpen
     public void onOpen(Session session, @PathParam("userToken") String currentUserToken) {
         String userId = JwtUtils.getUserId(currentUserToken);
+        // 生成sessionId,并给当前连接初始化currentUserId,currentUserToken,currentUserSession,currentUserSessionId
         this.currentUserSessionId = "session:" + snowflakeIdGenerator.nextId();
         this.currentUserId = Long.valueOf(userId);
         this.currentUserToken = currentUserToken;
         this.currentUserSession = session;
+
         socketConnectionPool.put(this.currentUserSessionId,this);
+        // 发送一个连接成功信令
         ResponseR responseR = new ResponseR().setSignal(SignalType.CONNECT_SUCCESS).setCode(200).setData(this.currentUserSessionId);
         sendMessage(this.currentUserSessionId, JSONObject.toJSONString(responseR));
     }

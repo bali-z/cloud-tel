@@ -134,7 +134,7 @@ public class SysUserController extends BaseController
      * 获取当前用户信息
      */
     @InnerAuth
-    @GetMapping("/info/{userId}")
+    @GetMapping("/userInfo/{userId}")
     public R<SysUser> info(@PathVariable("userId") Long userId)
     {
         SysUser sysUser = userService.selectUserById(userId);
