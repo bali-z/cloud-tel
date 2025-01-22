@@ -2,6 +2,7 @@ package com.ruoyi.rtc.pojo;
 
 import lombok.Data;
 import lombok.experimental.Accessors;
+import lombok.experimental.SuperBuilder;
 
 /**
  * @author dz
@@ -28,8 +29,4 @@ public class SignalBase {
      */
     private String ticket;
 
-    /**
-     *  token
-     */
-    private String selfToken;
 }

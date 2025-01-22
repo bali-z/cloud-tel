@@ -1,6 +1,5 @@
 package com.ruoyi.rtc.service.impl;
 
-import com.ruoyi.common.core.constant.SecurityConstants;
 import com.ruoyi.common.core.domain.R;
 import com.ruoyi.common.core.utils.DateUtils;
 import com.ruoyi.common.core.utils.JwtUtils;
@@ -10,11 +9,10 @@ import com.ruoyi.common.redis.service.RedisService;
 import com.ruoyi.common.security.utils.SecurityUtils;
 import com.ruoyi.rtc.domain.SysMeeting;
 import com.ruoyi.rtc.mapper.SysMeetingMapper;
-import com.ruoyi.rtc.pojo.MeetingInfo;
 import com.ruoyi.rtc.pojo.MeetingJoinForm;
 import com.ruoyi.rtc.service.ISysMeetingService;
+import com.ruoyi.rtc.util.MeetingUtil;
 import com.ruoyi.system.api.RemoteUserService;
-import com.ruoyi.system.api.domain.SysUser;
 import com.ruoyi.system.api.model.LoginUser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -22,7 +20,6 @@ import org.springframework.stereotype.Service;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 import static com.ruoyi.rtc.pojo.Constants.*;
 
@@ -118,7 +115,6 @@ public class SysMeetingServiceImpl implements ISysMeetingService {
 
 
     /**
-     *
      * @param form
      * @return
      */
@@ -148,54 +144,23 @@ public class SysMeetingServiceImpl implements ISysMeetingService {
         String ticket = JwtUtils.createToken(claims);
         // 当前请求用户是 会议发起人不需要校验密码
         if (currentUserUserId.equals(meeting.getUserId())) {
-            cacheOnlineMeeting(meetingId);
+            MeetingUtil.cacheMeetingInfo(redisService, meetingId, sysMeetingMapper, remoteUserService);
             return R.ok("ticket", ticket);
         }
         // 不是会议发起人
         if (StringUtils.isEmpty(meeting.getPassword())) {
             // 会议没有设置密码,默认允许加入会议
-            cacheOnlineMeeting(meetingId);
+            MeetingUtil.cacheMeetingInfo(redisService, meetingId, sysMeetingMapper, remoteUserService);
             return R.ok();
         }
         // 会议有密码，进入会议没有输入密码 || 密码不对
         if (StringUtils.isEmpty(password) || !password.equals(meeting.getPassword())) {
             return R.fail();
         } else {
-            cacheOnlineMeeting(meetingId);
+            MeetingUtil.cacheMeetingInfo(redisService, meetingId, sysMeetingMapper, remoteUserService);
             return R.ok("ticket", ticket);
         }
     }
-
-
-    /**
-     *  只是把会议加入到在线会议中去了，相当于这个会议正在执行状态
-     * @param meetingId
-     */
-    public void cacheOnlineMeeting(String meetingId) {
-        // 查询会议信息
-        SysMeeting meeting = getMeetingByMeetingId(meetingId);
-        long currentTimeMillis = System.currentTimeMillis();
-        // 已经结束的不缓存
-        if (meeting == null || meeting.getStartTime().getTime() > currentTimeMillis || meeting.getEndTime().getTime() < currentTimeMillis) {
-            return;
-        }
-        R<SysUser> userInfo = remoteUserService.getUserInfoById(meeting.getUserId(), SecurityConstants.INNER);
-        // 封装 MeetingInfo 信息
-        MeetingInfo meetingInfo = new MeetingInfo();
-        meetingInfo.setMeetingId(meetingId).setMeetingTitle(meeting.getTitle())
-                .setMeetingOwnerUserId(meeting.getUserId()).setMeetingPassword(meeting.getPassword())
-                .setStartTime(meeting.getStartTime()).setEndTime(meeting.getEndTime())
-                .setMeetingOwnerName(userInfo.getData().getUserName())
-                .setMeetingOwnerAvatar(userInfo.getData().getAvatar());
-        String key = ONLINE_MEETING_PREFIX_KEY + meetingId;
-        if (redisService.hasKey(key)) {
-            return;
-        }
-        redisService.setCacheObject(key, meetingInfo);
-        long timeOut = (meeting.getEndTime().getTime() - meeting.getStartTime().getTime()) / 1000 + 1;
-        redisService.expire(key,timeOut, TimeUnit.SECONDS);
-    }
-
 
     /**
      * 根据 meetingId 获取 meeting 信息

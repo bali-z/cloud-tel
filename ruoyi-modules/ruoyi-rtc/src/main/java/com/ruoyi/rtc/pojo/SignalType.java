@@ -13,11 +13,13 @@ public enum SignalType {
     ANSWER("ANSWER", "ANSWER"),
     CANDIDATE("CANDIDATE","CANDIDATE"),
     JOIN_CONFIRM("JOIN_CONFIRM", "JOIN MEETING CONFIRM"),
-    JOIN_RESOLVE("JOIN_RESOLVE","The initiator agrees to join the group chat!"),
-    JOIN_REJECT("JOIN_REJECT", "The initiator did not respond or refused!"),
-    ENTER("ENTER", "进入会议"),
-    HANGUP("HANGUP", "挂断"),
-    HANGUP_SUCCESS("HANGUP_RESPONSE", "挂断成功");
+    JOIN_RESOLVE("JOIN_RESOLVE","The initiator agrees to join the group chat"),
+    JOIN_REJECT("JOIN_REJECT", "The initiator did not respond or refused"),
+    ENTER("ENTER", "Enter the meeting"),
+    HANGUP("HANGUP", "Hang up"),
+    FAIL("FAIL","fail"),
+    FORCED_RETURN("FORCED_RETURN","forced return"),
+    HANGUP_SUCCESS("HANGUP_RESPONSE", "Hang up success");
 
     private final String signal;
     private final String content;

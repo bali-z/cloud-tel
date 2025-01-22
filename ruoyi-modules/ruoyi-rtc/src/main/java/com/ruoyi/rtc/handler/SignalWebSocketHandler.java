@@ -5,6 +5,7 @@ import com.ruoyi.common.redis.generator.SnowflakeIdGenerator;
 import com.ruoyi.common.redis.service.RedisService;
 import com.ruoyi.rtc.pojo.ResponseR;
 import com.ruoyi.rtc.pojo.SignalType;
+import com.ruoyi.rtc.pojo.handle.JoinSignal;
 import com.ruoyi.rtc.service.ISysMeetingService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,6 +18,8 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static com.ruoyi.rtc.pojo.Constants.DATA;
 import static com.ruoyi.rtc.pojo.Constants.SIGNAL;
@@ -49,20 +52,26 @@ public class SignalWebSocketHandler extends TextWebSocketHandler {
     private static final ConcurrentHashMap<String, WebSocketSession> socketConnectionPool = new ConcurrentHashMap<>();
 
     /**
-     *  生成的 sessionId，连接建立完成后分配
+     *  会议锁
      */
-    public String CURRENT_SESSION_ID_IN_WEBSOCKET_SESSION = "currentSessionId";
+    public static final ConcurrentHashMap<String, Lock> meetingLockPool = new ConcurrentHashMap<>();
+
+    /**
+     * 生成的 sessionId，连接建立完成后分配
+     */
+    public static final String CURRENT_SESSION_ID_IN_WEBSOCKET_SESSION = "currentSessionId";
 
 
     /**
-     *  向那个 session 发送消息
+     * 向那个 session 发送消息
+     *
      * @param message
      * @param sessionId
      */
-    public static void sendMessage(String message,String sessionId) {
+    public static void sendMessage(String message, String sessionId) {
         WebSocketSession session = socketConnectionPool.get(sessionId);
-        if(null == session){
-            log.debug("sessionId:{},unexists!",sessionId);
+        if (null == session) {
+            log.debug("sessionId:{},unexists!", sessionId);
             return;
         }
         try {
@@ -74,7 +83,8 @@ public class SignalWebSocketHandler extends TextWebSocketHandler {
 
 
     /**
-     *  相当于 OnOpen
+     * 相当于 OnOpen
+     *
      * @param session
      * @throws Exception
      */
@@ -83,15 +93,16 @@ public class SignalWebSocketHandler extends TextWebSocketHandler {
         String sessionId = snowflakeIdGenerator.nextId() + ":" + session.getId();
         session.getAttributes().put(CURRENT_SESSION_ID_IN_WEBSOCKET_SESSION, sessionId);
         socketConnectionPool.put(sessionId, session);
-        log.debug("连接建立成功 sessionId:{}",sessionId);
+        log.debug("连接建立成功 sessionId:{}", sessionId);
 
         // 给当前连接发送一个 CONNECT_SUCCESS 信令，并将sessionId传递
         ResponseR responseR = new ResponseR().setSignal(SignalType.CONNECT_SUCCESS).setCode(200).setData(sessionId);
-        sendMessage(JSONObject.toJSONString(responseR),sessionId);
+        sendMessage(JSONObject.toJSONString(responseR), sessionId);
     }
 
     /**
-     *  OnMessage
+     * OnMessage
+     *
      * @param session
      * @param message
      * @throws Exception
@@ -99,7 +110,7 @@ public class SignalWebSocketHandler extends TextWebSocketHandler {
     @Override
     public void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         String payload = message.getPayload();
-        log.debug("Message from:{},message:{}",session.getAttributes().get(CURRENT_SESSION_ID_IN_WEBSOCKET_SESSION), payload);
+        log.debug("Message from:{},message:{}", session.getAttributes().get(CURRENT_SESSION_ID_IN_WEBSOCKET_SESSION), payload);
         try {
             JSONObject messageObj = JSONObject.parseObject(payload);
             String signalType = messageObj.getString(SIGNAL);
@@ -110,24 +121,52 @@ public class SignalWebSocketHandler extends TextWebSocketHandler {
                 case PING -> {
                     // 响应 pong
                     ResponseR responseR = new ResponseR().setSignal(SignalType.PONG).setCode(200).setData("");
-                    sendMessage(JSONObject.toJSONString(responseR),(String)session.getAttributes().get(CURRENT_SESSION_ID_IN_WEBSOCKET_SESSION));
+                    sendMessage(JSONObject.toJSONString(responseR), (String) session.getAttributes().get(CURRENT_SESSION_ID_IN_WEBSOCKET_SESSION));
                     break;
                 }
-//                case JOIN -> {
-//                    JoinSignal.dealJoin(redisService,this,data);
-//                    break;
-//                }
-                default -> { log.info("receive message sessionId:{},message:{},unknow siginal!",session.getAttributes().get(CURRENT_SESSION_ID_IN_WEBSOCKET_SESSION),payload); break;}
+                case JOIN -> {
+                    JoinSignal.dealJoin(sysMeetingService,redisService,data,session);
+                    break;
+                }
+                default -> {
+                    log.info("receive message sessionId:{},message:{},unknow siginal!", session.getAttributes().get(CURRENT_SESSION_ID_IN_WEBSOCKET_SESSION), payload);
+                    break;
+                }
             }
-        }catch (Exception exception){
-            log.error("WebSocket receive message failed,message:{} errors:{}", message,exception.getMessage());
+        } catch (Exception exception) {
+            log.error("WebSocket receive message failed,message:{} errors:{}", message, exception.getMessage());
         }
     }
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
-        log.debug("session:{} offline!",session.getAttributes().get(CURRENT_SESSION_ID_IN_WEBSOCKET_SESSION));
+        log.debug("session:{} offline!", session.getAttributes().get(CURRENT_SESSION_ID_IN_WEBSOCKET_SESSION));
         socketConnectionPool.remove(session.getAttributes().get(CURRENT_SESSION_ID_IN_WEBSOCKET_SESSION));
+    }
+
+
+
+    public static void removeMeetingLock(String meetingId){
+        meetingLockPool.remove(meetingId);
+    }
+
+    /**
+     *  使用懒汉模式，获取锁
+     * @param meetingId
+     * @return
+     */
+    public static Lock getMeetingLock(String meetingId){
+        Lock lock = meetingLockPool.get(meetingId);
+        if(null == lock){
+            synchronized (SignalWebSocketHandler.class) {
+                // 上锁成功，但有可能lock已经有了所以一定要没有才能new出来
+                if(null == lock) {
+                    lock = new ReentrantLock();
+                    meetingLockPool.put(meetingId, lock);
+                }
+            }
+        }
+        return lock;
     }
 
 }
