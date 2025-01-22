@@ -1,15 +1,28 @@
 package com.ruoyi.rtc.config;
 
+import com.ruoyi.rtc.handler.SignalWebSocketHandler;
+import com.ruoyi.rtc.interceptor.AuthHandshakeInterceptor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.socket.config.annotation.EnableWebSocket;
+import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
+import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
 import org.springframework.web.socket.server.standard.ServerEndpointExporter;
 import org.springframework.web.socket.server.standard.ServletServerContainerFactoryBean;
 
 /**
  * @author dz
  */
+@EnableWebSocket
 @Configuration
-public class RtcApplicationConfig {
+public class WebSocketConfig implements WebSocketConfigurer {
+
+    @Autowired
+    private SignalWebSocketHandler signalWebSocketHandler;
+
+    @Autowired
+    private AuthHandshakeInterceptor authHandshakeInterceptor;
     /**
      * 注入ServerEndpointExporter，
      * 这个bean会自动注册使用了@ServerEndpoint注解声明的Websocket endpoint
@@ -30,5 +43,12 @@ public class RtcApplicationConfig {
         container.setMaxTextMessageBufferSize(32768);
         container.setMaxBinaryMessageBufferSize(32768);
         return container;
+    }
+
+    @Override
+    public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
+        registry.addHandler(signalWebSocketHandler, "/websocket")
+                .addInterceptors(authHandshakeInterceptor)
+                .setAllowedOrigins("*");
     }
 }

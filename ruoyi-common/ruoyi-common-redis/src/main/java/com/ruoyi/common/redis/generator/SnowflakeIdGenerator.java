@@ -11,7 +11,6 @@ import java.util.concurrent.TimeUnit;
  * @author dz
  */
 @SuppressWarnings("ALL")
-@Component
 public class SnowflakeIdGenerator {
 
     // 起始时间戳（可根据需求调整）
