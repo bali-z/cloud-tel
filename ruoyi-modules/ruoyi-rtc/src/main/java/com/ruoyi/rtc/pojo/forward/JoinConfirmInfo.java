@@ -1,5 +1,6 @@
 package com.ruoyi.rtc.pojo.forward;
 
+import com.ruoyi.rtc.pojo.SignalBase;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
@@ -8,7 +9,12 @@ import lombok.experimental.Accessors;
  */
 @Data
 @Accessors(chain = true)
-public class JoinConfirmInfo {
+public class JoinConfirmInfo extends SignalBase {
+    /**
+     *  用户id
+     */
+    private Long userId;
+
     /**
      *  用户姓名
      */

@@ -7,6 +7,7 @@ import com.ruoyi.rtc.pojo.ResponseR;
 import com.ruoyi.rtc.pojo.SignalType;
 import com.ruoyi.rtc.pojo.handle.JoinSignal;
 import com.ruoyi.rtc.service.ISysMeetingService;
+import com.ruoyi.system.api.RemoteUserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,6 +46,8 @@ public class SignalWebSocketHandler extends TextWebSocketHandler {
     @Autowired
     private RedisService redisService;
 
+    @Autowired
+    private RemoteUserService remoteUserService;
 
     /**
      * 缓存所有连接的session
@@ -125,7 +128,7 @@ public class SignalWebSocketHandler extends TextWebSocketHandler {
                     break;
                 }
                 case JOIN -> {
-                    JoinSignal.dealJoin(sysMeetingService,redisService,data,session);
+                    JoinSignal.dealJoin(sysMeetingService,redisService,remoteUserService,data,session);
                     break;
                 }
                 default -> {
