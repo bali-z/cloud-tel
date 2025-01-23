@@ -11,7 +11,6 @@ import com.ruoyi.rtc.pojo.MeetingInfo;
 import com.ruoyi.rtc.pojo.ResponseR;
 import com.ruoyi.rtc.pojo.SignalType;
 import com.ruoyi.rtc.pojo.forward.EnterInfo;
-import com.ruoyi.rtc.service.ISysMeetingService;
 import com.ruoyi.system.api.RemoteUserService;
 import com.ruoyi.system.api.domain.SysUser;
 
@@ -54,26 +53,25 @@ public class MeetingUtil {
             enterInfo.setAvatar(member.getAvatar());
 
             for (MeetingInfo.MeetingMember meetingMember : members) {
-                if(meetingMember.getUserId().equals(member.getUserId())){
+                if (meetingMember.getUserId().equals(member.getUserId())) {
                     continue;
                 }
                 SignalWebSocketHandler.sendMessage(JSONObject.toJSONString(new ResponseR().setSignal(SignalType.ENTER).setCode(200)
-                                .setData(enterInfo)), meetingMember.getSessionId());
+                        .setData(enterInfo)), meetingMember.getSessionId());
             }
 
-        }catch (Exception exception){
+        } catch (Exception exception) {
             lock.unlock();
-        }finally {
+        } finally {
             lock.unlock();
         }
-
 
 
     }
 
     /**
      * 踢除会议中某人
-     *  从会议缓存中删除，并给那个session发一个下线信令
+     * 从会议缓存中删除，并给那个session发一个下线信令
      *
      * @param meetingId
      * @param memberUserId
@@ -95,10 +93,10 @@ public class MeetingUtil {
                 }
             }
             redisService.setCacheObject(ONLINE_MEETING_PREFIX_KEY + meetingId, meetingInfo);
-        }catch (Exception exception ){
+        } catch (Exception exception) {
             lock.unlock();
             exception.printStackTrace();
-        }finally {
+        } finally {
             lock.unlock();
         }
     }
@@ -150,7 +148,7 @@ public class MeetingUtil {
         }
         redisService.setCacheObject(key, meetingInfo);
         long timeOut = (meeting.getEndTime().getTime() - currentTimeMillis) / 1000 + 60;
-        redisService.expire(key,timeOut, TimeUnit.SECONDS);
+        redisService.expire(key, timeOut, TimeUnit.SECONDS);
     }
 
 }
