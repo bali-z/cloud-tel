@@ -85,8 +85,8 @@ public class JoinSignal extends SignalBase {
         if (StringUtils.isNotEmpty(ticket)) {
             Claims claims = JwtUtils.parseToken(ticket);
             String meetingIdInTicket = (String) claims.get(MEETING_TICKET_ITEM_MEETING_ID);
-            Long userIdInTicket = (Long) claims.get(MEETING_TICKET_ITEM_MEETING_OWNER_USER_ID);
-            Long memberIdInTicket = (Long) claims.get(MEETING_TICKET_ITEM_MEETING_MEMBER_USER_ID);
+            Long userIdInTicket = ((Integer) claims.get(MEETING_TICKET_ITEM_MEETING_OWNER_USER_ID)).longValue();
+            Long memberIdInTicket = ((Integer) claims.get(MEETING_TICKET_ITEM_MEETING_MEMBER_USER_ID)).longValue();
 
             // 票据校验正确 JOIN_RESOLVE
             if (meetingId.equals(meetingIdInTicket) && currentUserId.equals(memberIdInTicket) && meeting.getUserId().equals(userIdInTicket)) {
