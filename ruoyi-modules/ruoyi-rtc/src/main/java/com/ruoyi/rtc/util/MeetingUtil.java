@@ -1,6 +1,7 @@
 package com.ruoyi.rtc.util;
 
 import com.alibaba.fastjson.JSONObject;
+import com.ruoyi.common.core.constant.Constants;
 import com.ruoyi.common.core.constant.SecurityConstants;
 import com.ruoyi.common.core.domain.R;
 import com.ruoyi.common.redis.service.RedisService;
@@ -8,7 +9,7 @@ import com.ruoyi.rtc.domain.SysMeeting;
 import com.ruoyi.rtc.handler.SignalWebSocketHandler;
 import com.ruoyi.rtc.mapper.SysMeetingMapper;
 import com.ruoyi.rtc.pojo.MeetingInfo;
-import com.ruoyi.rtc.pojo.ResponseR;
+import com.ruoyi.rtc.pojo.RtcR;
 import com.ruoyi.rtc.pojo.SignalType;
 import com.ruoyi.rtc.pojo.forward.EnterInfo;
 import com.ruoyi.system.api.RemoteUserService;
@@ -56,8 +57,7 @@ public class MeetingUtil {
                 if (meetingMember.getUserId().equals(member.getUserId())) {
                     continue;
                 }
-                SignalWebSocketHandler.sendMessage(JSONObject.toJSONString(new ResponseR().setSignal(SignalType.ENTER).setCode(200)
-                        .setData(enterInfo)), meetingMember.getSessionId());
+                SignalWebSocketHandler.sendMessage(JSONObject.toJSONString(RtcR.instance(Constants.SUCCESS,SignalType.ENTER,"",enterInfo)), meetingMember.getSessionId());
             }
 
         } catch (Exception exception) {
@@ -89,7 +89,7 @@ public class MeetingUtil {
                 if (memberUserId.equals(member.getUserId())) {
                     iterator.remove();
                     // 强制退出信令发送给被推出的家伙
-                    SignalWebSocketHandler.sendMessage(JSONObject.toJSONString(new ResponseR().setSignal(SignalType.FORCED_RETURN).setCode(200).setData("您被请出会议!")), member.getSessionId());
+                    SignalWebSocketHandler.sendMessage(JSONObject.toJSONString(RtcR.instance(Constants.SUCCESS,SignalType.FORCED_RETURN,"您被请出会议!","您被请出会议!")), member.getSessionId());
                 }
             }
             redisService.setCacheObject(ONLINE_MEETING_PREFIX_KEY + meetingId, meetingInfo);

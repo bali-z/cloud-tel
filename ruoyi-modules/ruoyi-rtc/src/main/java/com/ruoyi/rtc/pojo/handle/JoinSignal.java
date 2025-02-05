@@ -2,15 +2,15 @@ package com.ruoyi.rtc.pojo.handle;
 
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.nacos.common.utils.StringUtils;
+import com.ruoyi.common.core.constant.Constants;
 import com.ruoyi.common.core.constant.SecurityConstants;
 import com.ruoyi.common.core.domain.R;
 import com.ruoyi.common.core.utils.JwtUtils;
 import com.ruoyi.common.redis.service.RedisService;
-import com.ruoyi.common.security.utils.SecurityUtils;
 import com.ruoyi.rtc.domain.SysMeeting;
 import com.ruoyi.rtc.handler.SignalWebSocketHandler;
 import com.ruoyi.rtc.pojo.MeetingInfo;
-import com.ruoyi.rtc.pojo.ResponseR;
+import com.ruoyi.rtc.pojo.RtcR;
 import com.ruoyi.rtc.pojo.SignalBase;
 import com.ruoyi.rtc.pojo.SignalType;
 import com.ruoyi.rtc.pojo.forward.JoinConfirmInfo;
@@ -64,20 +64,20 @@ public class JoinSignal extends SignalBase {
         SysMeeting meeting = sysMeetingService.getMeetingByMeetingId(meetingId);
         if (null == meeting) {
             log.debug("The meeting does not exist or has been cancelled!");
-            SignalWebSocketHandler.sendMessage(JSONObject.toJSONString(new ResponseR().setSignal(SignalType.FAIL).setCode(200).setData("会议不存在或已取消!")), sessionId);
+            SignalWebSocketHandler.sendMessage(JSONObject.toJSONString(RtcR.instance(Constants.SUCCESS,SignalType.FAIL,"会议不存在或已取消!","会议不存在或已取消!")), sessionId);
             return;
         }
         long currentTimeMillis = System.currentTimeMillis();
         // 会议未开始或者已经结束
         if (meeting.getStartTime().getTime() > currentTimeMillis || meeting.getEndTime().getTime() < currentTimeMillis) {
             log.debug("The meeting has not started or has already ended!");
-            SignalWebSocketHandler.sendMessage(JSONObject.toJSONString(new ResponseR().setSignal(SignalType.FAIL).setCode(200).setData("会议未开始在或已结束!")), sessionId);
+            SignalWebSocketHandler.sendMessage(JSONObject.toJSONString(RtcR.instance(Constants.SUCCESS,SignalType.FAIL,"会议未开始在或已结束!","会议未开始在或已结束!")), sessionId);
             return;
         }
 
         // 如果是会议发起者，不用校验票据，JOIN_RESOLVE
         if (meeting.getUserId().equals(currentUserId)) {
-            SignalWebSocketHandler.sendMessage(JSONObject.toJSONString(new ResponseR().setSignal(SignalType.JOIN_RESOLVE).setCode(200).setData("")), sessionId);
+            SignalWebSocketHandler.sendMessage(JSONObject.toJSONString(RtcR.instance(Constants.SUCCESS,SignalType.JOIN_RESOLVE,"","")), sessionId);
             return;
         }
         // 当前信令不是会议发起者发送的
@@ -90,7 +90,7 @@ public class JoinSignal extends SignalBase {
 
             // 票据校验正确 JOIN_RESOLVE
             if (meetingId.equals(meetingIdInTicket) && currentUserId.equals(memberIdInTicket) && meeting.getUserId().equals(userIdInTicket)) {
-                SignalWebSocketHandler.sendMessage(JSONObject.toJSONString(new ResponseR().setSignal(SignalType.JOIN_RESOLVE).setCode(200).setData("")), sessionId);
+                SignalWebSocketHandler.sendMessage(JSONObject.toJSONString(RtcR.instance(Constants.SUCCESS,SignalType.JOIN_RESOLVE,"","")), sessionId);
                 return;
             }
         }
@@ -108,7 +108,7 @@ public class JoinSignal extends SignalBase {
         // 管理员未进入会议
         if(adminMember == null){
             // 发送拒绝信令
-            SignalWebSocketHandler.sendMessage(JSONObject.toJSONString(new ResponseR().setSignal(SignalType.JOIN_REJECT).setCode(200).setData("会议发起人离线!")),sessionId);
+            SignalWebSocketHandler.sendMessage(JSONObject.toJSONString(RtcR.instance(Constants.SUCCESS,SignalType.JOIN_REJECT,"会议发起人离线!","会议发起人离线!")),sessionId);
             return ;
         }
 
@@ -120,8 +120,8 @@ public class JoinSignal extends SignalBase {
         R<SysUser> userInfoById = remoteUserService.getUserInfoById(currentUserId, SecurityConstants.INNER);
         joinConfirmInfo.setName(userInfoById.getData().getUserName());
         joinConfirmInfo.setAvatar(userInfoById.getData().getAvatar());
-
-        SignalWebSocketHandler.sendMessage(JSONObject.toJSONString(new ResponseR().setSignal(SignalType.JOIN_CONFIRM).setCode(200).setData(joinConfirmInfo)), adminMember.getSessionId());
+        
+        SignalWebSocketHandler.sendMessage(JSONObject.toJSONString(RtcR.instance(Constants.SUCCESS,SignalType.JOIN_CONFIRM,"",joinConfirmInfo)), adminMember.getSessionId());
 
     }
 }

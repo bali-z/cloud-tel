@@ -1,9 +1,10 @@
 package com.ruoyi.rtc.handler;
 
 import com.alibaba.fastjson.JSONObject;
+import com.ruoyi.common.core.constant.Constants;
 import com.ruoyi.common.redis.generator.SnowflakeIdGenerator;
 import com.ruoyi.common.redis.service.RedisService;
-import com.ruoyi.rtc.pojo.ResponseR;
+import com.ruoyi.rtc.pojo.RtcR;
 import com.ruoyi.rtc.pojo.SignalType;
 import com.ruoyi.rtc.pojo.handle.JoinSignal;
 import com.ruoyi.rtc.service.ISysMeetingService;
@@ -99,12 +100,18 @@ public class SignalWebSocketHandler extends TextWebSocketHandler {
         log.debug("连接建立成功 sessionId:{}", sessionId);
 
         // 给当前连接发送一个 CONNECT_SUCCESS 信令，并将sessionId传递
-        ResponseR responseR = new ResponseR().setSignal(SignalType.CONNECT_SUCCESS).setCode(200).setData(sessionId);
-        sendMessage(JSONObject.toJSONString(responseR), sessionId);
+        sendMessage(JSONObject.toJSONString(RtcR.instance(Constants.SUCCESS,SignalType.CONNECT_SUCCESS,"",sessionId)), sessionId);
     }
 
     /**
      * OnMessage
+     *  所接受数据格式为 RtcR
+     *  {
+     *         code int,
+     *         msg String,
+     *         data T,
+     *         signal SignalType
+     *  }
      *
      * @param session
      * @param message
@@ -123,8 +130,7 @@ public class SignalWebSocketHandler extends TextWebSocketHandler {
             switch (type) {
                 case PING -> {
                     // 响应 pong
-                    ResponseR responseR = new ResponseR().setSignal(SignalType.PONG).setCode(200).setData("");
-                    sendMessage(JSONObject.toJSONString(responseR), (String) session.getAttributes().get(CURRENT_SESSION_ID_IN_WEBSOCKET_SESSION));
+                    sendMessage(JSONObject.toJSONString(RtcR.instance(Constants.SUCCESS,SignalType.PONG,"","")), (String) session.getAttributes().get(CURRENT_SESSION_ID_IN_WEBSOCKET_SESSION));
                     break;
                 }
                 case JOIN -> {
