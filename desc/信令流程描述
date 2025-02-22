@@ -17,13 +17,33 @@
     "businessType": "MEETING"
 },
 {
+    "avatar": "",
     "businessType": "MEETING",
     "code": "JOIN_RESOLVE",
     "meetingId": "284231526927962112",
-    "ticket": "eyJhbGciOiJIUzUxMiJ9.eyJNRUVUSU5HX09XTkVSX1VTRVJfSUQiOjEsIk1FRVRJTkdfTUVNQkVSX1VTRVJfSUQiOjEsIk1FRVRJTkdfSUQiOiIyODQyMzE1MjY5Mjc5NjIxMTIifQ.gL4HEOp3CmxlUNHHSImqsjrIL52Glkqf9VW0cyoGltcaXEjVcfN5Hmj5fgTdTYQlOMMJUIia0mexZWyBKfqrIg"
+    "name": "ry",
+    "userId": 2
 },
 {
     "businessType": "MEETING",
     "code": "JOIN_REJECT",
     "meetingId": "284231526927962112"
+},
+
+{ // 发送
+    "ticket": "eyJhbGciOiJIUzUxMiJ9.eyJNRUVUSU5HX09XTkVSX1VTRVJfSUQiOjEsIk1FRVRJTkdfTUVNQkVSX1VTRVJfSUQiOjIsIk1FRVRJTkdfSUQiOiIyODQyMzE1MjY5Mjc5NjIxMTIifQ.b0jRcHi49YRCBfAQq_KBDhbVInWksCaCocIgcDmqdAM8HgZbtTrWnoOGwBfpJOE2v1LK05U22WXSeI205SXNGw",
+    "meetingId": "284231526927962112",
+    "code": "ENTER",
+    "businessType": "MEETING"
+
+},
+{
+// 接受
+    "avatar": "",
+    "businessType": "MEETING",
+    "code": "ENTER",
+    "meetingId": "284231526927962112",
+    "name": "ry",
+    "sourceSessionId": "284319152846540800:90cc4ea4-c2d1-363f-74e0-81266b614ebe",
+    "sourceUserId": 2
 }

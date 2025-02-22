@@ -107,6 +107,32 @@ public class MeetingSignalHandler {
         }
     }
 
+
+    /**
+     * 前端发送
+     *  {
+     *      "businessType": "MEETING",
+     *      "code": "ENTER",
+     *      "meetingId": "1234454",
+     *      "ticket": "xxsdada.xcasdad"
+     *  }
+     *
+     * 返回：
+     *   给其他人发送
+     *      {
+     *       "businessType": "MEETING",
+     *        "code": "ENTER",
+     *         "sourceUserId": 2,
+     *         "sourceSessionId": "xxxxxxxxxxxx",
+     *          "name": "xxx",
+     *          "avatar": ""
+     *      }
+     *
+     *
+     *
+     * @param session
+     * @param message
+     */
     private void dealEnter(WebSocketSession session, String message) {
         Enter enter = JSONObject.parseObject(message, Enter.class);
         String meetingId = enter.getMeetingId();
@@ -159,12 +185,59 @@ public class MeetingSignalHandler {
         });
     }
 
+    /**
+     *
+     * 前端发送
+     *  {
+     *     "businessType": "MEETING",
+     *     "code": "JOIN_RESOLVE",
+     *     "meetingId": "284231526927962112",
+     *     "targetSessionId": ”bbbb:xxxxxxx“,
+     *     "targetUserId": 1
+     * },
+     *后端转发：
+     *  {
+     *     "businessType": "MEETING",
+     *     "code": "JOIN_RESOLVE",
+     *     "meetingId": "284231526927962112",
+     *     "ticket": "xxxxx.xxadaddadc",
+     *     "userId": 2,
+     *     "name": "ry",
+     *     "avatar": ""
+     * }
+     *
+     *  处理加入会议信令
+     * @param session
+     * @param message
+     */
     private void dealJoinResolve(WebSocketSession session, String message) {
-        // 把消息转发即可
+        // 管理员同意入会，给这个比一个ticket
         JoinResolve joinResolve = JSONObject.parseObject(message, JoinResolve.class);
-        String targetSessionId = joinResolve.getTargetSessionId();
+        String meetingId = joinResolve.getMeetingId();
+        Long targetUserId = joinResolve.getTargetUserId();
+
+        R<SysUser> userInfoById = remoteUserService.getUserInfoById(targetUserId, SecurityConstants.INNER);
+
+        // 获取会议信息
+        MeetingProcess meetingProcess = meetingProcessUtil.getMeetingProcess(meetingId);
+        if (null == meetingProcess) {
+            log.error("meetingProcess is null,meetingId:{}", meetingId);
+            return;
+        }
+        // 生成ticket
+        String ticket = TicketUtil.createTicket(meetingId, meetingProcess.getHoldUserId(),targetUserId);
+
+        JoinResolve resolve = new JoinResolve();
+        resolve.setMeetingId(meetingId);
+        resolve.setTicket(ticket);
+        resolve.setUserId(targetUserId);
+        resolve.setName(userInfoById.getData().getUserName());
+        resolve.setAvatar(userInfoById.getData().getAvatar());
+        resolve.setTargetSessionId(joinResolve.getTargetSessionId());
+        resolve.setTargetUserId(joinResolve.getTargetUserId());
+
         // 把joinReject消息转发即可
-        SignalDealWebSocketHandler.sendMessage(JSONObject.toJSONString(joinResolve), targetSessionId);
+        SignalDealWebSocketHandler.sendMessage(JSONObject.toJSONString(resolve), resolve.getTargetSessionId());
     }
 
     /**
@@ -183,6 +256,53 @@ public class MeetingSignalHandler {
 
     /**
      * 处理JOIN信令
+     *
+     * 前端发送：
+     * {
+     *     "meetingId": "284231526927962112",
+     *     "ticket": "xxxxx.xxadaddadc",
+     *     "code": "JOIN",
+     *     "businessType": "MEETING"
+     * }
+     *
+     * 后端返回:
+     * 鉴权成功：
+     *  {
+     *     "businessType": "MEETING",
+     *     "code": "JOIN_RESOLVE",
+     *     "meetingId": "284231526927962112",
+     *     "ticket": "xxxxx.xxadaddadc",
+     *     "userId": 2,
+     *     "name": "ry",
+     *     "avatar": "",
+     * }
+     * 鉴权失败：
+     *     发送JOIN_CONFIRM信令给会议管理源
+     *           {
+     *               "businessType": "MEETING",
+     *               "code": "JOIN_CONFIRM",
+     *               "meetingId": "284231526927962112",
+     *               "name": "ry",
+     *               "avatar": "",
+     *               "sourceUserId": 2,
+     *               "userId": 2
+     *           }
+     *
+     *     发送JOIN_REJECT
+     *     {
+     *         "businessType": "MEETING",
+     *         "code": "JOIN_REJECT",
+     *         "meetingId": "284231526927962112"
+     *     }
+     *
+     *
+     *
+     *
+     *
+     *
+     *
+     *
+     *
      *
      * @param session
      * @param message
@@ -211,7 +331,7 @@ public class MeetingSignalHandler {
             if (!TicketUtil.verifyTicket(ticket, meetingId, meetingProcess.getHoldUserId(), userId)) {
                 newTicket = TicketUtil.createTicket(meetingId, meetingProcess.getHoldUserId(), userId);
             }
-
+            // 允许加入会议并把用户信息发送给发起者
             JoinResolve resolve = new JoinResolve();
             resolve.setMeetingId(meetingId);
             resolve.setTicket(newTicket);
@@ -226,6 +346,7 @@ public class MeetingSignalHandler {
         if (TicketUtil.verifyTicket(ticket, meetingId, meetingProcess.getHoldUserId(), userId)) {
             JoinResolve resolve = new JoinResolve();
             resolve.setMeetingId(meetingId);
+            resolve.setTicket(ticket);
             resolve.setUserId(userId);
             resolve.setName(userInfoById.getData().getUserName());
             resolve.setAvatar(userInfoById.getData().getAvatar());
