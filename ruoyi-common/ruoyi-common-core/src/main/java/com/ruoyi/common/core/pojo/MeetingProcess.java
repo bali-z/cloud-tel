@@ -2,6 +2,7 @@ package com.ruoyi.common.core.pojo;
 
 import lombok.Data;
 
+import java.io.Serializable;
 import java.util.Date;
 import java.util.Objects;
 import java.util.Set;
@@ -11,7 +12,7 @@ import java.util.Set;
  */
 @SuppressWarnings("ALL")
 @Data
-public class MeetingProcess {
+public class MeetingProcess implements Serializable {
 
     /**
      *  会议ID (用户获取ticket时就有了)
@@ -51,7 +52,7 @@ public class MeetingProcess {
      *  会议成员
      */
     @Data
-    public static class MeetingMember{
+    public static class MeetingMember implements Serializable{
         /**
          * 成员USERID (ENTER 后有)
          */

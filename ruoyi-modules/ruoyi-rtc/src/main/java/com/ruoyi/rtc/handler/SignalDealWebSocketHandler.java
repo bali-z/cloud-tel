@@ -1,7 +1,10 @@
 package com.ruoyi.rtc.handler;
 
+import com.alibaba.fastjson2.JSONObject;
 import com.ruoyi.common.redis.generator.SnowflakeIdGenerator;
 import com.ruoyi.common.redis.service.RedisService;
+import com.ruoyi.rtc.meeting.MeetingSignalHandler;
+import com.ruoyi.rtc.meeting.signal.ConnectSuccess;
 import com.ruoyi.system.api.RemoteUserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +39,10 @@ public class SignalDealWebSocketHandler extends TextWebSocketHandler {
 
     @Autowired
     private RemoteUserService remoteUserService;
+
+    @Autowired
+    private MeetingSignalHandler meetingSignalHandler;
+
 
     /**
      * 缓存所有连接的session
@@ -88,8 +95,8 @@ public class SignalDealWebSocketHandler extends TextWebSocketHandler {
         session.getAttributes().put(CURRENT_SESSION_ID_IN_WEBSOCKET_SESSION, sessionId);
         socketConnectionPool.put(sessionId, session);
         log.debug("连接建立成功 sessionId:{}", sessionId);
-
-        // todo: 给当前连接发送一个 CONNECT_SUCCESS 信令，并将sessionId传递
+        // 发送连接成功消息
+        sendMessage(JSONObject.toJSONString(new ConnectSuccess(sessionId)),sessionId);
     }
 
     /**
