@@ -1,6 +1,6 @@
 package com.ruoyi.rtc.config;
 
-import com.ruoyi.rtc.handler.SignalWebSocketHandler;
+import com.ruoyi.rtc.handler.SignalDealWebSocketHandler;
 import com.ruoyi.rtc.interceptor.AuthHandshakeInterceptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -19,10 +19,11 @@ import org.springframework.web.socket.server.standard.ServletServerContainerFact
 public class WebSocketConfig implements WebSocketConfigurer {
 
     @Autowired
-    private SignalWebSocketHandler signalWebSocketHandler;
+    private SignalDealWebSocketHandler signalDealWebSocketHandler;
 
     @Autowired
     private AuthHandshakeInterceptor authHandshakeInterceptor;
+
     /**
      * 注入ServerEndpointExporter，
      * 这个bean会自动注册使用了@ServerEndpoint注解声明的Websocket endpoint
@@ -47,7 +48,7 @@ public class WebSocketConfig implements WebSocketConfigurer {
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(signalWebSocketHandler, "/websocket")
+        registry.addHandler(signalDealWebSocketHandler, "/websocket")
                 .addInterceptors(authHandshakeInterceptor)
                 .setAllowedOrigins("*");
     }
