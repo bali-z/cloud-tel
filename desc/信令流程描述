@@ -1,0 +1,5 @@
+0.CONNECT_SUCCESS: 后端发送给前端;  内容:{sessionId:当前socket连接的sessionId};
+1.PING(心跳信令): 前端定时发送心跳包; 内容:{sessionId:当前socket连接的sessionId,signal: PING};
+2.PONG(响应信令): 后端发送给前端; 内容:{sessionId:当前socket连接的sessionId,signal: PONG};
+3.JOIN(加入会议请求信令): 前端发送给后端; 后端鉴权 成功->JOIN_RESOLVE,失败->(会议管理者是否存在 是->给会议管理者发送JOIN_CONFIRM, 否-> JOIN_REJECT);
+4.ENTER(进入会议信令): 前端发送给后端
