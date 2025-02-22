@@ -8,8 +8,9 @@ import java.util.Set;
 /**
  *  会议进程对象
  */
+@SuppressWarnings("ALL")
 @Data
-public class MeetingPorcess {
+public class MeetingProcess {
 
     /**
      *  会议ID (用户获取ticket时就有了)
