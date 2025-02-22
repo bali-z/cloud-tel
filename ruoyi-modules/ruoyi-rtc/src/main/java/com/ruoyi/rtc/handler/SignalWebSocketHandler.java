@@ -130,14 +130,14 @@ public class SignalWebSocketHandler extends TextWebSocketHandler {
      * @param meetingId
      * @return
      */
-    public static Lock getMeetingLock(String meetingId) {
-        Lock lock = meetingLockPool.get(meetingId);
+    public static Lock getLockByResourceId(String resourceId) {
+        Lock lock = meetingLockPool.get(resourceId);
         if (null == lock) {
             synchronized (SignalWebSocketHandler.class) {
                 // 上锁成功，但有可能lock已经有了所以一定要没有才能new出来
                 if (null == lock) {
                     lock = new ReentrantLock();
-                    meetingLockPool.put(meetingId, lock);
+                    meetingLockPool.put(resourceId, lock);
                 }
             }
         }
