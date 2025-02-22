@@ -27,6 +27,7 @@ import static com.ruoyi.rtc.handler.SignalWebSocketHandler.CURRENT_SESSION_ID_IN
 /**
  * @author dz
  */
+@SuppressWarnings("ALL")
 @Data
 @Accessors(chain = true)
 public class JoinSignal extends SignalBase {
@@ -107,7 +108,10 @@ public class JoinSignal extends SignalBase {
         // 会议发起人在线
         // 给会议发起者发送JOIN_CONFIRM
         JoinConfirmInfo joinConfirmInfo = new JoinConfirmInfo();
+        joinConfirmInfo.setMeetingId(meetingId);
         joinConfirmInfo.setSourceSessionId(sessionId);
+        joinConfirmInfo.setSourceUserId(currentUserId);
+        joinConfirmInfo.setTargetSessionId(adminMember.getSessionId());
         joinConfirmInfo.setUserId(currentUserId);
         R<SysUser> userInfoById = remoteUserService.getUserInfoById(currentUserId, SecurityConstants.INNER);
         joinConfirmInfo.setName(userInfoById.getData().getUserName());

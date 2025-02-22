@@ -22,10 +22,20 @@ public class SignalBase {
      * 信令发送方
      */
     private String sourceSessionId;
+
+    /**
+     *  发送方 userId
+     */
+    private Long sourceUserId;
     /**
      * 信令接受方
      */
     private String targetSessionId;
+
+    /**
+     *  接受方 userId
+     */
+    private Long targetUserId;
 
     /**
      * 会议id

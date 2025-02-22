@@ -10,12 +10,11 @@ import lombok.experimental.Accessors;
 @Data
 @Accessors(chain = true)
 public class OfferAnswer extends SignalBase {
-    /**
-     *  设备音视频信息
-     */
-    private String sdp;
-    /**
-     *  类型 offer / answer
-     */
-    private String type;
+    private Description description;
+
+    @Data
+    public static class Description {
+        private String sdp;
+        private String type;
+    }
 }
