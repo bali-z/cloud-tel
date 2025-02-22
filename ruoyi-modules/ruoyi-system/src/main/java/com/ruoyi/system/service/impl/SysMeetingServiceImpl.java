@@ -1,5 +1,9 @@
 package com.ruoyi.system.service.impl;
 
+import com.ruoyi.common.core.domain.R;
+import com.ruoyi.common.core.exception.ServiceException;
+import com.ruoyi.common.core.utils.StringUtils;
+import com.ruoyi.common.core.utils.ticket.TicketUtil;
 import com.ruoyi.common.redis.generator.SnowflakeIdGenerator;
 import com.ruoyi.common.security.utils.SecurityUtils;
 import com.ruoyi.system.domain.SysMeeting;
@@ -8,6 +12,7 @@ import com.ruoyi.system.service.ISysMeetingService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -94,5 +99,48 @@ public class SysMeetingServiceImpl implements ISysMeetingService {
     @Override
     public int deleteSysMeetingByMeetingId(String meetingId) {
         return sysMeetingMapper.deleteSysMeetingByMeetingId(meetingId);
+    }
+
+    /**
+     *  生成票据
+     * @param sysMeeting
+     * @return
+     */
+    @Override
+    public R<String> takeTicket(SysMeeting sysMeeting) {
+        if(null == sysMeeting || null == sysMeeting.getMeetingId()){
+            return R.fail("会议号为空!");
+        }
+        Long userId = SecurityUtils.getUserId();
+        String meetingId = sysMeeting.getMeetingId();
+        SysMeeting meeting = sysMeetingMapper.selectSysMeetingByMeetingId(meetingId);
+        if(null == meetingId){
+            return R.fail("会议不存在!");
+        }
+
+        // 如果会议没到开始时间
+        Date currentTime = new Date();
+        if(currentTime.before(meeting.getPlanStartTime())){
+            return R.fail("会议尚未开始!");
+        }
+        if(currentTime.after(meeting.getPlanEndTime())){
+            return R.fail("会议已经结束");
+        }
+
+        // 如果当前用户就是会议发起人则直接给人家生成票据
+        if(userId.equals(meeting.getHoldUserId())){
+            return R.ok(TicketUtil.createTicket(meetingId,meeting.getHoldUserId(),userId));
+        }
+        // 否则鉴权
+        // 1.密码是否正确
+        if(!StringUtils.isEmpty(sysMeeting.getPassword()) && sysMeeting.getPassword().equals(meeting.getPassword())){
+            return R.ok(TicketUtil.createTicket(meetingId,meeting.getHoldUserId(),userId));
+        }
+        // 2.密码不正确/会议有密码但是没输入密码
+        if(!StringUtils.isEmpty(meeting.getPassword()) && !meeting.getPassword().equals(sysMeeting.getPassword())){
+            return R.fail("会议密码错误!");
+        }
+        // 会议没有密码无法鉴权交给会议发起者处理，这里就生成ticket
+        return R.ok();
     }
 }

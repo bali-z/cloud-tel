@@ -1,5 +1,6 @@
 package com.ruoyi.system.controller;
 
+import com.ruoyi.common.core.domain.R;
 import com.ruoyi.common.core.utils.poi.ExcelUtil;
 import com.ruoyi.common.core.web.controller.BaseController;
 import com.ruoyi.common.core.web.domain.AjaxResult;
@@ -88,4 +89,14 @@ public class SysMeetingController extends BaseController {
     public AjaxResult remove(@PathVariable String[] meetingIds) {
         return toAjax(sysMeetingService.deleteSysMeetingByMeetingIds(meetingIds));
     }
+
+    /**
+     * 查询系统会议列表
+     */
+    @RequiresPermissions("system:meeting:list")
+    @PostMapping("/takeTicket")
+    public R<String> takeTicket(@RequestBody SysMeeting sysMeeting) {
+        return sysMeetingService.takeTicket(sysMeeting);
+    }
+
 }

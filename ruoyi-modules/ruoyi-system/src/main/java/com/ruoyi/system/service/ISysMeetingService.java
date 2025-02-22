@@ -1,5 +1,6 @@
 package com.ruoyi.system.service;
 
+import com.ruoyi.common.core.domain.R;
 import com.ruoyi.system.domain.SysMeeting;
 
 import java.util.List;
@@ -58,4 +59,6 @@ public interface ISysMeetingService {
      * @return 结果
      */
     public int deleteSysMeetingByMeetingId(String meetingId);
+
+    R<String> takeTicket(SysMeeting sysMeeting);
 }
