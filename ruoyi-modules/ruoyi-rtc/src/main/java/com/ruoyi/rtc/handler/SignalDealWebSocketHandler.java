@@ -3,6 +3,7 @@ package com.ruoyi.rtc.handler;
 import com.alibaba.fastjson2.JSONObject;
 import com.ruoyi.common.redis.generator.SnowflakeIdGenerator;
 import com.ruoyi.common.redis.service.RedisService;
+import com.ruoyi.rtc.business.BaseMessage;
 import com.ruoyi.rtc.meeting.MeetingSignalHandler;
 import com.ruoyi.rtc.meeting.signal.ConnectSuccess;
 import com.ruoyi.system.api.RemoteUserService;
@@ -17,11 +18,11 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+
+import static com.ruoyi.rtc.business.BaseMessage.CURRENT_SESSION_ID_IN_WEBSOCKET_SESSION;
 
 /**
- *  websocket 信令处理
+ * websocket 信令处理
  */
 @SuppressWarnings("ALL")
 @Component
@@ -29,7 +30,7 @@ public class SignalDealWebSocketHandler extends TextWebSocketHandler {
 
     private static final Logger log = LoggerFactory.getLogger(SignalDealWebSocketHandler.class);
     /**
-     *  雪花算法ID迭代器
+     * 雪花算法ID迭代器
      */
     @Autowired
     private SnowflakeIdGenerator snowflakeIdGenerator;
@@ -48,16 +49,6 @@ public class SignalDealWebSocketHandler extends TextWebSocketHandler {
      * 缓存所有连接的session
      */
     private static final ConcurrentHashMap<String, WebSocketSession> socketConnectionPool = new ConcurrentHashMap<>();
-
-    /**
-     * 会议锁
-     */
-    public static final ConcurrentHashMap<String, Lock> meetingLockPool = new ConcurrentHashMap<>();
-
-    /**
-     * 生成的 sessionId，连接建立完成后分配
-     */
-    public static final String CURRENT_SESSION_ID_IN_WEBSOCKET_SESSION = "CURRENT_SESSION_ID_IN_WEBSOCKET_SESSION";
 
 
     /**
@@ -96,11 +87,12 @@ public class SignalDealWebSocketHandler extends TextWebSocketHandler {
         socketConnectionPool.put(sessionId, session);
         log.debug("连接建立成功 sessionId:{}", sessionId);
         // 发送连接成功消息
-        sendMessage(JSONObject.toJSONString(new ConnectSuccess(sessionId)),sessionId);
+        sendMessage(JSONObject.toJSONString(new ConnectSuccess(sessionId)), sessionId);
     }
 
     /**
      * OnMessage
+     *
      * @param session
      * @param message
      * @throws Exception
@@ -109,6 +101,19 @@ public class SignalDealWebSocketHandler extends TextWebSocketHandler {
     public void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         String payload = message.getPayload();
         log.debug("Message from:{},message:{}", session.getAttributes().get(CURRENT_SESSION_ID_IN_WEBSOCKET_SESSION), payload);
+        // 根据消息类型处理
+        BaseMessage baseMessage = JSONObject.parseObject(payload, BaseMessage.class);
+        switch (baseMessage.getBusinessType()) {
+            case MEETING -> {
+                meetingSignalHandler.dealMessage(session, payload);
+                break;
+            }
+            default -> {
+                log.error("未定义的业务类型消息,{}", message);
+                break;
+            }
+
+        }
     }
 
     @Override
@@ -116,29 +121,4 @@ public class SignalDealWebSocketHandler extends TextWebSocketHandler {
         log.debug("session:{} offline!", session.getAttributes().get(CURRENT_SESSION_ID_IN_WEBSOCKET_SESSION));
         socketConnectionPool.remove(session.getAttributes().get(CURRENT_SESSION_ID_IN_WEBSOCKET_SESSION));
     }
-
-
-    public static void removeMeetingLock(String meetingId) {
-        meetingLockPool.remove(meetingId);
-    }
-
-    /**
-     *  获取资源锁
-     * @param resourceId
-     * @return
-     */
-    public static Lock getLockByResourceId(String resourceId) {
-        Lock lock = meetingLockPool.get(resourceId);
-        if (null == lock) {
-            synchronized (SignalDealWebSocketHandler.class) {
-                // 上锁成功，但有可能lock已经有了所以一定要没有才能new出来
-                if (null == lock) {
-                    lock = new ReentrantLock();
-                    meetingLockPool.put(resourceId, lock);
-                }
-            }
-        }
-        return lock;
-    }
-
 }

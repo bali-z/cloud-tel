@@ -18,6 +18,12 @@ public class MeetingProcess implements Serializable {
      *  会议ID (用户获取ticket时就有了)
      */
     private String meetingId;
+
+    /**
+     * 会议密码 (用户获取ticket时就有了)
+     */
+    private String password;
+
     /**
      *  会议发起人ID (用户获取ticket时就有了)
      */

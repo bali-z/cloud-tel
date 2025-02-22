@@ -144,6 +144,7 @@ public class SysMeetingServiceImpl implements ISysMeetingService {
             SysUser sysUser = userService.selectUserById(meeting.getHoldUserId());
             MeetingProcess meetingProcess = new MeetingProcess();
             meetingProcess.setMeetingId(meeting.getMeetingId());
+            meetingProcess.setPassword(meeting.getPassword());
             meetingProcess.setHoldUserId(meeting.getHoldUserId());
             meetingProcess.setName(sysUser.getUserName());
             meetingProcess.setAvatarUrl(sysUser.getAvatar());

@@ -1,5 +1,29 @@
-0.CONNECT_SUCCESS: 后端发送给前端;  内容:{sessionId:当前socket连接的sessionId};
-1.PING(心跳信令): 前端定时发送心跳包; 内容:{sessionId:当前socket连接的sessionId,signal: PING};
-2.PONG(响应信令): 后端发送给前端; 内容:{sessionId:当前socket连接的sessionId,signal: PONG};
-3.JOIN(加入会议请求信令): 前端发送给后端; 后端鉴权 成功->JOIN_RESOLVE,失败->(会议管理者是否存在 是->给会议管理者发送JOIN_CONFIRM, 否-> JOIN_REJECT);
-4.ENTER(进入会议信令): 前端发送给后端
+{
+    "businessType": "MEETING",
+    "code": "CONNECT_SUCCESS",
+    "sessionId": "284288661254705152:3f42b35d-43a6-ff38-452b-44ce99a34c84"
+},
+{
+    "businessType": "MEETING",
+    "code": "PONG"
+},
+{
+    "code": "PING",
+    "businessType": "MEETING"
+},
+{
+    "meetingId": "284231526927962112",
+    "code": "JOIN",
+    "businessType": "MEETING"
+},
+{
+    "businessType": "MEETING",
+    "code": "JOIN_RESOLVE",
+    "meetingId": "284231526927962112",
+    "ticket": "eyJhbGciOiJIUzUxMiJ9.eyJNRUVUSU5HX09XTkVSX1VTRVJfSUQiOjEsIk1FRVRJTkdfTUVNQkVSX1VTRVJfSUQiOjEsIk1FRVRJTkdfSUQiOiIyODQyMzE1MjY5Mjc5NjIxMTIifQ.gL4HEOp3CmxlUNHHSImqsjrIL52Glkqf9VW0cyoGltcaXEjVcfN5Hmj5fgTdTYQlOMMJUIia0mexZWyBKfqrIg"
+},
+{
+    "businessType": "MEETING",
+    "code": "JOIN_REJECT",
+    "meetingId": "284231526927962112"
+}
