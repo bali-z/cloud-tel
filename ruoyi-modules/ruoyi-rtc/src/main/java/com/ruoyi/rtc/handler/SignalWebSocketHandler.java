@@ -148,7 +148,7 @@ public class SignalWebSocketHandler extends TextWebSocketHandler {
                 case JOIN_REJECT -> {
                     JoinRejectInfo joinRejectInfo = JSONObject.toJavaObject(data, JoinRejectInfo.class);
                     // 给目标session发送拒绝参会即可
-                    sendMessage(JSONObject.toJSONString(RtcR.instance(Constants.SUCCESS,SignalType.JOIN_REJECT,"管理员拒绝你的入会请求!","管理员拒绝你的入会请求!")),joinRejectInfo.getTargetSessionId());
+                    sendMessage(JSONObject.toJSONString(RtcR.instance(Constants.SUCCESS, SignalType.JOIN_REJECT, "管理员拒绝你的入会请求!", "管理员拒绝你的入会请求!")), joinRejectInfo.getTargetSessionId());
                     break;
                 }
                 // 会议发起者同意加入会议请求转发
@@ -158,7 +158,7 @@ public class SignalWebSocketHandler extends TextWebSocketHandler {
                     String meetingId = joinResolveInfo.getMeetingId();
                     SysMeeting meetingByMeetingId = sysMeetingService.getMeetingByMeetingId(meetingId);
                     String ticket = SignalBase.createTicket(meetingByMeetingId, joinResolveInfo.getTargetUserId());
-                    sendMessage(JSONObject.toJSONString(RtcR.instance(Constants.SUCCESS,SignalType.JOIN_RESOLVE,"agree!",ticket)),joinResolveInfo.getTargetSessionId());
+                    sendMessage(JSONObject.toJSONString(RtcR.instance(Constants.SUCCESS, SignalType.JOIN_RESOLVE, "agree!", ticket)), joinResolveInfo.getTargetSessionId());
                     break;
                 }
                 // 接受到Enter信令 (参会)
@@ -171,7 +171,7 @@ public class SignalWebSocketHandler extends TextWebSocketHandler {
                     OfferAnswer offerAnswer = JSONObject.toJavaObject(data, OfferAnswer.class);
                     offerAnswer.setSourceSessionId((String) session.getAttributes().get(CURRENT_SESSION_ID_IN_WEBSOCKET_SESSION));
                     // 将媒体流信息发送给对方
-                    sendMessage(JSONObject.toJSONString(RtcR.instance(Constants.SUCCESS,SignalType.OFFER,"OFFER!",offerAnswer)),offerAnswer.getTargetSessionId());
+                    sendMessage(JSONObject.toJSONString(RtcR.instance(Constants.SUCCESS, SignalType.OFFER, "OFFER!", offerAnswer)), offerAnswer.getTargetSessionId());
                     break;
                 }
                 // offer 交换媒体流信息
@@ -179,7 +179,7 @@ public class SignalWebSocketHandler extends TextWebSocketHandler {
                     OfferAnswer offerAnswer = JSONObject.toJavaObject(data, OfferAnswer.class);
                     offerAnswer.setSourceSessionId((String) session.getAttributes().get(CURRENT_SESSION_ID_IN_WEBSOCKET_SESSION));
                     // 将媒体流信息发送给对方
-                    sendMessage(JSONObject.toJSONString(RtcR.instance(Constants.SUCCESS,SignalType.ANSWER,"ANSWER!",offerAnswer)),offerAnswer.getTargetSessionId());
+                    sendMessage(JSONObject.toJSONString(RtcR.instance(Constants.SUCCESS, SignalType.ANSWER, "ANSWER!", offerAnswer)), offerAnswer.getTargetSessionId());
                     break;
                 }
                 // 交换网络信息
@@ -187,7 +187,12 @@ public class SignalWebSocketHandler extends TextWebSocketHandler {
                     CandidateInfo candidateInfo = JSONObject.toJavaObject(data, CandidateInfo.class);
                     candidateInfo.setSourceSessionId((String) session.getAttributes().get(CURRENT_SESSION_ID_IN_WEBSOCKET_SESSION));
                     // 将媒体流信息发送给对方
-                    sendMessage(JSONObject.toJSONString(RtcR.instance(Constants.SUCCESS,SignalType.CANDIDATE,"CANDIDATE!",candidateInfo)),candidateInfo.getTargetSessionId());
+                    sendMessage(JSONObject.toJSONString(RtcR.instance(Constants.SUCCESS, SignalType.CANDIDATE, "CANDIDATE!", candidateInfo)), candidateInfo.getTargetSessionId());
+                    break;
+                }
+                // 挂断信令
+                case HANGUP -> {
+                    HangUpInfo.dealHangUp(sysMeetingService, redisService, remoteUserService, data, session);
                     break;
                 }
 

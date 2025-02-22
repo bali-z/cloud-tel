@@ -13,6 +13,7 @@ import com.ruoyi.rtc.pojo.MeetingMember;
 import com.ruoyi.rtc.pojo.RtcR;
 import com.ruoyi.rtc.pojo.SignalType;
 import com.ruoyi.rtc.pojo.forward.EnterInfo;
+import com.ruoyi.rtc.pojo.forward.HangUpInfo;
 import com.ruoyi.system.api.RemoteUserService;
 import com.ruoyi.system.api.domain.SysUser;
 
@@ -45,17 +46,24 @@ public class MeetingUtil {
             MeetingInfo meetingInfo = redisService.getCacheObject(ONLINE_MEETING_PREFIX_KEY + meetingId);
             List<MeetingMember> members = meetingInfo.getMeetingMembers();
             // 避免重复添加
-            boolean exist = false;
+            MeetingMember existMember = null;
             for (MeetingMember meetingMember : members) {
                 if(meetingMember.getUserId().equals(member.getUserId())){
-                    exist = true;
+                    existMember = meetingMember;
                     break;
                 }
             }
             // 成员不在会议成员中才添加
-            if(!exist) {
+            if(null == existMember) {
                 members.add(member);
+            }else{
+                existMember.setAvatar(member.getAvatar());
+                existMember.setName(member.getName());
+                existMember.setPermission(member.getPermission());
+                existMember.setSessionId(member.getSessionId());
+                existMember.setTicket(member.getTicket());
             }
+
             // 如果加入会议的是会议的创建者
             if(member.getUserId().equals(meetingInfo.getMeetingOwnerUserId())){
                 // 会议创建者的其他信息补充
@@ -93,13 +101,12 @@ public class MeetingUtil {
     }
 
     /**
-     * 踢除会议中某人
-     * 从会议缓存中删除，并给那个session发一个下线信令
+     * 挂断会议
      *
      * @param meetingId
      * @param memberUserId
      */
-    public static void eliminateMemberFromMeeting(RedisService redisService, String meetingId, Long memberUserId) {
+    public static void hangUpMemberFromMeeting(RedisService redisService, String meetingId, Long memberUserId) {
         Lock lock = SignalWebSocketHandler.getMeetingLock(meetingId);
         try {
             lock.lock();
@@ -111,11 +118,21 @@ public class MeetingUtil {
                 member = iterator.next();
                 if (memberUserId.equals(member.getUserId())) {
                     iterator.remove();
-                    // 强制退出信令发送给被推出的家伙
-                    SignalWebSocketHandler.sendMessage(JSONObject.toJSONString(RtcR.instance(Constants.SUCCESS,SignalType.FORCED_RETURN,"您被请出会议!","您被请出会议!")), member.getSessionId());
                 }
             }
-            redisService.setCacheObject(ONLINE_MEETING_PREFIX_KEY + meetingId, meetingInfo);
+            // 给其他用户发送挂断消息，让他们断开与这个比的连接
+            for (MeetingMember meetingMember : members) {
+                HangUpInfo hangUpInfo = new HangUpInfo();
+                hangUpInfo.setAvatar(member.getAvatar());
+                hangUpInfo.setName(member.getName());
+                hangUpInfo.setSourceUserId(member.getUserId());
+                hangUpInfo.setSourceSessionId(member.getSessionId());
+                SignalWebSocketHandler.sendMessage(JSONObject.toJSONString(RtcR.instance(Constants.SUCCESS, SignalType.HANGUP, "HANGUP!", hangUpInfo)), meetingMember.getSessionId());
+            }
+            // 缓存会议信息
+            cacheMeeting(redisService,meetingId,meetingInfo.getEndTime(),meetingInfo);
+            // todo: 当会议成员都退出了会议会议需要结束掉！
+
         } catch (Exception exception) {
             lock.unlock();
             exception.printStackTrace();
