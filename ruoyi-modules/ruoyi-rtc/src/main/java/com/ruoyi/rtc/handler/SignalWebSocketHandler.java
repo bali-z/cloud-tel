@@ -6,6 +6,7 @@ import com.ruoyi.common.redis.generator.SnowflakeIdGenerator;
 import com.ruoyi.common.redis.service.RedisService;
 import com.ruoyi.rtc.pojo.RtcR;
 import com.ruoyi.rtc.pojo.SignalType;
+import com.ruoyi.rtc.pojo.forward.EnterInfo;
 import com.ruoyi.rtc.pojo.handle.JoinSignal;
 import com.ruoyi.rtc.service.ISysMeetingService;
 import com.ruoyi.system.api.RemoteUserService;
@@ -56,7 +57,7 @@ public class SignalWebSocketHandler extends TextWebSocketHandler {
     private static final ConcurrentHashMap<String, WebSocketSession> socketConnectionPool = new ConcurrentHashMap<>();
 
     /**
-     *  会议锁
+     * 会议锁
      */
     public static final ConcurrentHashMap<String, Lock> meetingLockPool = new ConcurrentHashMap<>();
 
@@ -78,10 +79,12 @@ public class SignalWebSocketHandler extends TextWebSocketHandler {
             log.debug("sessionId:{},unexists!", sessionId);
             return;
         }
-        try {
-            session.sendMessage(new TextMessage(message));
-        } catch (IOException e) {
-            e.printStackTrace();
+        synchronized (session) {
+            try {
+                session.sendMessage(new TextMessage(message));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -100,18 +103,18 @@ public class SignalWebSocketHandler extends TextWebSocketHandler {
         log.debug("连接建立成功 sessionId:{}", sessionId);
 
         // 给当前连接发送一个 CONNECT_SUCCESS 信令，并将sessionId传递
-        sendMessage(JSONObject.toJSONString(RtcR.instance(Constants.SUCCESS,SignalType.CONNECT_SUCCESS,"",sessionId)), sessionId);
+        sendMessage(JSONObject.toJSONString(RtcR.instance(Constants.SUCCESS, SignalType.CONNECT_SUCCESS, "", sessionId)), sessionId);
     }
 
     /**
      * OnMessage
-     *  所接受数据格式为 RtcR
-     *  {
-     *         code int,
-     *         msg String,
-     *         data T,
-     *         signal SignalType
-     *  }
+     * 所接受数据格式为 RtcR
+     * {
+     * code int,
+     * msg String,
+     * data T,
+     * signal SignalType
+     * }
      *
      * @param session
      * @param message
@@ -128,15 +131,24 @@ public class SignalWebSocketHandler extends TextWebSocketHandler {
             JSONObject data = messageObj.getJSONObject(DATA);
             // 接收到 type
             switch (type) {
+                // 接收到心跳包
                 case PING -> {
                     // 响应 pong
-                    sendMessage(JSONObject.toJSONString(RtcR.instance(Constants.SUCCESS,SignalType.PONG,"","")), (String) session.getAttributes().get(CURRENT_SESSION_ID_IN_WEBSOCKET_SESSION));
+                    sendMessage(JSONObject.toJSONString(RtcR.instance(Constants.SUCCESS, SignalType.PONG, "", "")), (String) session.getAttributes().get(CURRENT_SESSION_ID_IN_WEBSOCKET_SESSION));
                     break;
                 }
+                // 接受到JOIN信令
                 case JOIN -> {
-                    JoinSignal.dealJoin(sysMeetingService,redisService,remoteUserService,data,session);
+                    JoinSignal.dealJoin(sysMeetingService, redisService, remoteUserService, data, session);
                     break;
                 }
+                // 接受到Enter信令
+                case ENTER -> {
+                    EnterInfo.dealEnter(sysMeetingService, redisService, remoteUserService, data, session);
+                    break;
+                }
+
+
                 default -> {
                     log.info("receive message sessionId:{},message:{},unknow siginal!", session.getAttributes().get(CURRENT_SESSION_ID_IN_WEBSOCKET_SESSION), payload);
                     break;
@@ -154,22 +166,22 @@ public class SignalWebSocketHandler extends TextWebSocketHandler {
     }
 
 
-
-    public static void removeMeetingLock(String meetingId){
+    public static void removeMeetingLock(String meetingId) {
         meetingLockPool.remove(meetingId);
     }
 
     /**
-     *  使用懒汉模式，获取锁
+     * 使用懒汉模式，获取锁
+     *
      * @param meetingId
      * @return
      */
-    public static Lock getMeetingLock(String meetingId){
+    public static Lock getMeetingLock(String meetingId) {
         Lock lock = meetingLockPool.get(meetingId);
-        if(null == lock){
+        if (null == lock) {
             synchronized (SignalWebSocketHandler.class) {
                 // 上锁成功，但有可能lock已经有了所以一定要没有才能new出来
-                if(null == lock) {
+                if (null == lock) {
                     lock = new ReentrantLock();
                     meetingLockPool.put(meetingId, lock);
                 }

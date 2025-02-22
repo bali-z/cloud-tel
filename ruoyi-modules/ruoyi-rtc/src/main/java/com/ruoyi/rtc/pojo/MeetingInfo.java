@@ -16,86 +16,46 @@ import java.util.List;
 public class MeetingInfo implements Serializable{
 
     /**
-     *  会议发起者 userId
+     *  会议发起者 userId (获取票据时填充)
      */
     private Long meetingOwnerUserId;
     /**
-     *  会议发起者 sessionId
+     *  会议发起者 sessionId (会议发起者 enter时填充)
      */
     private String meetingOwnerSessionId;
     /**
-     *  会议 Id
+     *  会议 Id (获取票据时填充)
      */
     private String meetingId;
     /**
-     * 会议标题
+     * 会议标题 (获取票据时填充)
      */
     private String meetingTitle;
     /**
-     *  会议密码
+     *  会议密码 (获取票据时填充)
      */
     private String meetingPassword;
     /**
-     *  会议开始时间
+     *  会议开始时间 (获取票据时填充)
      */
     private Date startTime;
     /**
-     *  会议结束时间
+     *  会议结束时间 (获取票据时填充)
      */
     private Date endTime;
 
     /**
-     *  会议发起人 姓名
+     *  会议发起人 姓名(会议发起者enter时填充)
      */
     private String meetingOwnerName;
 
     /**
-     *  会议发起人头像
+     *  会议发起人头像 (会议发起者enter时填充)
      */
     private String meetingOwnerAvatar;
     /**
-     *  会议当前在线成员
+     *  会议当前在线成员 (成员enter时添加)
      */
     private List<MeetingMember> meetingMembers;
 
-    /**
-     *  Join 信令后有
-     */
-    @Data
-    @Accessors(chain = true)
-    public static class MeetingMember implements Serializable {
-        /**
-         *
-         *  会议成员 token
-         */
-        private String userToken;
-
-        /**
-         *
-         *  会议成员 userId
-         */
-        private Long userId;
-        /**
-         *
-         * 会议成员 sessionId
-         */
-        private String sessionId;
-        /**
-         *  会议成员姓名
-         */
-        private String name;
-        /**
-         *  会议成员票据信息
-         */
-        private String ticket;
-        /**
-         *  会议成员头像信息
-         */
-        private String avatar;
-        /**
-         *  会议用户权限(麦克风，视频，录屏) 0|1|0 视频 可以
-         */
-        private String permission;
-
-    }
 }

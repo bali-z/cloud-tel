@@ -2,7 +2,6 @@ package com.ruoyi.rtc.service.impl;
 
 import com.ruoyi.common.core.domain.R;
 import com.ruoyi.common.core.utils.DateUtils;
-import com.ruoyi.common.core.utils.JwtUtils;
 import com.ruoyi.common.core.utils.StringUtils;
 import com.ruoyi.common.redis.generator.SnowflakeIdGenerator;
 import com.ruoyi.common.redis.service.RedisService;
@@ -10,18 +9,14 @@ import com.ruoyi.common.security.utils.SecurityUtils;
 import com.ruoyi.rtc.domain.SysMeeting;
 import com.ruoyi.rtc.mapper.SysMeetingMapper;
 import com.ruoyi.rtc.pojo.MeetingJoinForm;
+import com.ruoyi.rtc.pojo.SignalBase;
 import com.ruoyi.rtc.service.ISysMeetingService;
 import com.ruoyi.rtc.util.MeetingUtil;
 import com.ruoyi.system.api.RemoteUserService;
-import com.ruoyi.system.api.model.LoginUser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-
-import static com.ruoyi.rtc.pojo.Constants.*;
 
 /**
  * 会议管理Service业务层处理
@@ -115,6 +110,8 @@ public class SysMeetingServiceImpl implements ISysMeetingService {
 
 
     /**
+     * 获取ticket
+     *
      * @param form
      * @return
      */
@@ -134,14 +131,8 @@ public class SysMeetingServiceImpl implements ISysMeetingService {
         if (meeting.getEndTime().getTime() < currentTimeMillis) {
             return R.fail("会议已结束!");
         }
-        LoginUser currentUser = SecurityUtils.getLoginUser();
-        Long currentUserUserId = currentUser.getUserid();
-        Map<String, Object> claims = new HashMap<>();
-        claims.put(MEETING_TICKET_ITEM_MEETING_ID, meeting.getMeetingId());
-        claims.put(MEETING_TICKET_ITEM_MEETING_OWNER_USER_ID, meeting.getUserId());
-        claims.put(MEETING_TICKET_ITEM_MEETING_MEMBER_USER_ID, currentUserUserId);
-        // 会议票据
-        String ticket = JwtUtils.createToken(claims);
+        Long currentUserUserId = SecurityUtils.getUserId();
+        String ticket = SignalBase.createTicket(meeting, currentUserUserId);
         // 当前请求用户是 会议发起人不需要校验密码
         if (currentUserUserId.equals(meeting.getUserId())) {
             MeetingUtil.cacheMeetingInfo(redisService, meetingId, sysMeetingMapper, remoteUserService);
@@ -161,6 +152,7 @@ public class SysMeetingServiceImpl implements ISysMeetingService {
             return R.ok("ticket", ticket);
         }
     }
+
 
     /**
      * 根据 meetingId 获取 meeting 信息

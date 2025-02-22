@@ -9,6 +9,7 @@ import com.ruoyi.rtc.domain.SysMeeting;
 import com.ruoyi.rtc.handler.SignalWebSocketHandler;
 import com.ruoyi.rtc.mapper.SysMeetingMapper;
 import com.ruoyi.rtc.pojo.MeetingInfo;
+import com.ruoyi.rtc.pojo.MeetingMember;
 import com.ruoyi.rtc.pojo.RtcR;
 import com.ruoyi.rtc.pojo.SignalType;
 import com.ruoyi.rtc.pojo.forward.EnterInfo;
@@ -16,6 +17,7 @@ import com.ruoyi.system.api.RemoteUserService;
 import com.ruoyi.system.api.domain.SysUser;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -36,14 +38,34 @@ public class MeetingUtil {
      * @param meetingId
      * @param member
      */
-    public static void addMemberToMeeting(RedisService redisService, String meetingId, MeetingInfo.MeetingMember member) {
+    public static void addMemberToMeeting(RedisService redisService, String meetingId,MeetingMember member) {
         Lock lock = SignalWebSocketHandler.getMeetingLock(meetingId);
         try {
             lock.lock();
             MeetingInfo meetingInfo = redisService.getCacheObject(ONLINE_MEETING_PREFIX_KEY + meetingId);
-            List<MeetingInfo.MeetingMember> members = meetingInfo.getMeetingMembers();
-            members.add(member);
-            redisService.setCacheObject(ONLINE_MEETING_PREFIX_KEY + meetingId, meetingInfo);
+            List<MeetingMember> members = meetingInfo.getMeetingMembers();
+            // 避免重复添加
+            boolean exist = false;
+            for (MeetingMember meetingMember : members) {
+                if(meetingMember.getUserId().equals(member.getUserId())){
+                    exist = true;
+                    break;
+                }
+            }
+            // 成员不在会议成员中才添加
+            if(!exist) {
+                members.add(member);
+            }
+            // 如果加入会议的是会议的创建者
+            if(member.getUserId().equals(meetingInfo.getMeetingOwnerUserId())){
+                // 会议创建者的其他信息补充
+                meetingInfo.setMeetingOwnerName(member.getName());
+                meetingInfo.setMeetingOwnerSessionId(member.getSessionId());
+                meetingInfo.setMeetingOwnerAvatar(member.getAvatar());
+            }
+            // 会议信息缓存
+            cacheMeeting(redisService,meetingId,meetingInfo.getEndTime(),meetingInfo);
+
             // 发一个进入会议的信令，给其他成员发送自己的信息以便于交换offer answer candidate
             EnterInfo enterInfo = new EnterInfo();
             enterInfo.setMeetingId(meetingId);
@@ -53,7 +75,8 @@ public class MeetingUtil {
             enterInfo.setName(member.getName());
             enterInfo.setAvatar(member.getAvatar());
 
-            for (MeetingInfo.MeetingMember meetingMember : members) {
+            // 给其他成员发送Enter信令
+            for (MeetingMember meetingMember : members) {
                 if (meetingMember.getUserId().equals(member.getUserId())) {
                     continue;
                 }
@@ -81,9 +104,9 @@ public class MeetingUtil {
         try {
             lock.lock();
             MeetingInfo meetingInfo = redisService.getCacheObject(ONLINE_MEETING_PREFIX_KEY + meetingId);
-            List<MeetingInfo.MeetingMember> members = meetingInfo.getMeetingMembers();
-            Iterator<MeetingInfo.MeetingMember> iterator = members.iterator();
-            MeetingInfo.MeetingMember member = null;
+            List<MeetingMember> members = meetingInfo.getMeetingMembers();
+            Iterator<MeetingMember> iterator = members.iterator();
+            MeetingMember member = null;
             while (iterator.hasNext()) {
                 member = iterator.next();
                 if (memberUserId.equals(member.getUserId())) {
@@ -122,7 +145,7 @@ public class MeetingUtil {
     public static void cacheMeetingInfo(RedisService redisService, String meetingId, SysMeetingMapper sysMeetingMapper, RemoteUserService remoteUserService) {
         // 查询会议信息
         SysMeeting meeting = sysMeetingMapper.selectSysMeetingByMeetingId(meetingId);
-        long currentTimeMillis = System.currentTimeMillis();
+
         // 没查询到会议信息
         if (meeting == null) {
             return;
@@ -137,17 +160,15 @@ public class MeetingUtil {
                 .setStartTime(meeting.getStartTime()).setEndTime(meeting.getEndTime())
                 .setMeetingOwnerName(userInfo.getData().getUserName())
                 .setMeetingOwnerAvatar(userInfo.getData().getAvatar()).setMeetingMembers(new ArrayList<>());
-        cacheMeeting(redisService, meetingId, meeting, currentTimeMillis, meetingInfo);
+        // 缓存会议
+        cacheMeeting(redisService, meetingId, meeting.getEndTime(), meetingInfo);
     }
 
-    private static void cacheMeeting(RedisService redisService, String meetingId, SysMeeting meeting, long currentTimeMillis, MeetingInfo meetingInfo) {
+    private static void cacheMeeting(RedisService redisService, String meetingId, Date endTime, MeetingInfo meetingInfo) {
+        long currentTimeMillis = System.currentTimeMillis();
         String key = ONLINE_MEETING_PREFIX_KEY + meetingId;
-        // 只对会议内容缓存，不缓存会议成员，此时不会有成员
-        if (redisService.hasKey(key)) {
-            return;
-        }
         redisService.setCacheObject(key, meetingInfo);
-        long timeOut = (meeting.getEndTime().getTime() - currentTimeMillis) / 1000 + 60;
+        long timeOut = (endTime.getTime() - currentTimeMillis) / 1000 + 60;
         redisService.expire(key, timeOut, TimeUnit.SECONDS);
     }
 
