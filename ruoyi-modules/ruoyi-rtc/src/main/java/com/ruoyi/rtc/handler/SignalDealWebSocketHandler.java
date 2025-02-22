@@ -1,6 +1,7 @@
 package com.ruoyi.rtc.handler;
 
 import com.alibaba.fastjson2.JSONObject;
+import com.ruoyi.common.core.constant.SecurityConstants;
 import com.ruoyi.common.redis.generator.SnowflakeIdGenerator;
 import com.ruoyi.common.redis.service.RedisService;
 import com.ruoyi.rtc.business.BaseMessage;
@@ -120,5 +121,6 @@ public class SignalDealWebSocketHandler extends TextWebSocketHandler {
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
         log.debug("session:{} offline!", session.getAttributes().get(CURRENT_SESSION_ID_IN_WEBSOCKET_SESSION));
         socketConnectionPool.remove(session.getAttributes().get(CURRENT_SESSION_ID_IN_WEBSOCKET_SESSION));
+        meetingSignalHandler.removeAllMemberFromMeetingProcess(Long.parseLong((String) session.getAttributes().get(SecurityConstants.DETAILS_USER_ID)));
     }
 }

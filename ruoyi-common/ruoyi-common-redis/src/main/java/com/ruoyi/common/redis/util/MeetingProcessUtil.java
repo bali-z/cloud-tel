@@ -4,6 +4,7 @@ import com.ruoyi.common.core.pojo.MeetingProcess;
 import com.ruoyi.common.redis.service.RedisService;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.util.Collection;
 import java.util.Date;
 
 @SuppressWarnings("ALL")
@@ -32,6 +33,30 @@ public class MeetingProcessUtil {
 
     public void removeMeetingProcess(String meetingId) {
         redisService.deleteObject(MEETING_PROCESS_PREFIX + meetingId);
+    }
+
+    /**
+     * 删除会议进程中的成员
+     *
+     * @param meetingId
+     * @param userId
+     */
+    public void removeMemberFromMeetingProcess(String meetingId, Long userId) {
+        MeetingProcess meetingProcess = getMeetingProcess(meetingId);
+        meetingProcess.getMeetingMembers().removeIf(member -> member.getUserId().equals(userId));
+        cacheMeetingProcess(meetingProcess);
+    }
+
+    /**
+     * 删除所有会议进程中的某个成员
+     */
+    public void removeAllMemberFromMeetingProcess(Long userId) {
+        Collection<String> keys = redisService.keys(MEETING_PROCESS_PREFIX + "*");
+        for (String key : keys) {
+            MeetingProcess meetingProcess = redisService.getCacheObject(key);
+            meetingProcess.getMeetingMembers().removeIf(member -> member.getUserId().equals(userId));
+            cacheMeetingProcess(meetingProcess);
+        }
     }
 
 

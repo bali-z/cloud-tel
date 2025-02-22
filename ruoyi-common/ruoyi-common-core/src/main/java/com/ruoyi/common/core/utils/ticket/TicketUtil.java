@@ -45,8 +45,8 @@ public class TicketUtil {
         }
         Claims claims = JwtUtils.parseToken(ticket);
         String ticketMeetingId = (String)claims.get(MEETING_ID);
-        Long ticketOwnerUserId = (Long)claims.get(MEETING_OWNER_USER_ID);
-        Long ticketMemberUserId = (Long)claims.get(MEETING_MEMBER_USER_ID);
+        Long ticketOwnerUserId = Long.parseLong(String.valueOf(claims.get(MEETING_OWNER_USER_ID)));
+        Long ticketMemberUserId = Long.parseLong(String.valueOf(claims.get(MEETING_MEMBER_USER_ID)));
         return meetingId.equals(ticketMeetingId) && ownerUserId.equals(ticketOwnerUserId) && memberUserId.equals(ticketMemberUserId);
     }
 }

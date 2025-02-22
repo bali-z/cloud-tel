@@ -2,11 +2,14 @@ package com.ruoyi.rtc.meeting;
 
 import com.alibaba.fastjson2.JSONObject;
 import com.ruoyi.common.core.constant.SecurityConstants;
+import com.ruoyi.common.core.domain.R;
 import com.ruoyi.common.core.pojo.MeetingProcess;
 import com.ruoyi.common.core.utils.ticket.TicketUtil;
 import com.ruoyi.common.redis.util.MeetingProcessUtil;
 import com.ruoyi.rtc.handler.SignalDealWebSocketHandler;
 import com.ruoyi.rtc.meeting.signal.*;
+import com.ruoyi.system.api.RemoteUserService;
+import com.ruoyi.system.api.domain.SysUser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +31,9 @@ import static com.ruoyi.rtc.business.BaseMessage.CURRENT_SESSION_ID_IN_WEBSOCKET
 @SuppressWarnings("ALL")
 @Component
 public class MeetingSignalHandler {
+
+    @Autowired
+    private RemoteUserService remoteUserService;
 
     @Autowired
     private MeetingProcessUtil meetingProcessUtil;
@@ -76,7 +82,18 @@ public class MeetingSignalHandler {
                     dealJoin(session, message);
                     break;
                 }
-
+                case JOIN_REJECT -> {
+                    dealJoinReject(session, message);
+                    break;
+                }
+                case JOIN_RESOLVE -> {
+                    dealJoinResolve(session, message);
+                    break;
+                }
+                case ENTER -> {
+                    dealEnter(session, message);
+                    break;
+                }
 
                 default -> {
                     log.error("undefined code error:{}", message);
@@ -89,6 +106,80 @@ public class MeetingSignalHandler {
             log.error("dealMessage error:{}", e.getMessage());
         }
     }
+
+    private void dealEnter(WebSocketSession session, String message) {
+        Enter enter = JSONObject.parseObject(message, Enter.class);
+        String meetingId = enter.getMeetingId();
+        String ticket = enter.getTicket();
+        Long userId = Long.parseLong((String) session.getAttributes().get(SecurityConstants.DETAILS_USER_ID));
+        String userName = (String) session.getAttributes().get(SecurityConstants.DETAILS_USERNAME);
+        String currentSessionId = (String) session.getAttributes().get(CURRENT_SESSION_ID_IN_WEBSOCKET_SESSION);
+
+        //1.获取会议
+        MeetingProcess meetingProcess = meetingProcessUtil.getMeetingProcess(meetingId);
+        if (null == meetingProcess) {
+            log.error("meetingProcess is null,meetingId:{}", meetingId);
+            return;
+        }
+        //2.校验ticket
+        if (!TicketUtil.verifyTicket(ticket,meetingId,meetingProcess.getHoldUserId(),userId)) {
+            log.error("ticket is error,meetingId:{},ticket:{}", meetingId, ticket);
+            return;
+        }
+        //3.票据校验通
+        // 构建会议人员对象添加到会议中
+        // 从用户服务中获取用户信息
+
+        R<SysUser> userInfoById = remoteUserService.getUserInfoById(userId, SecurityConstants.INNER);
+        MeetingProcess.MeetingMember meetingMember = new MeetingProcess.MeetingMember();
+        meetingMember.setUserId(userId);
+        meetingMember.setName(userInfoById.getData().getUserName());
+        meetingMember.setAvatarUrl(userInfoById.getData().getAvatar());
+        meetingMember.setSessionId(currentSessionId);
+
+        Enter enterInfo = new Enter();
+        enterInfo.setMeetingId(meetingId);
+        enterInfo.setSourceUserId(userId);
+        enterInfo.setSourceSessionId(currentSessionId);
+        enterInfo.setName(userInfoById.getData().getUserName());
+        enterInfo.setAvatar(userInfoById.getData().getAvatar());
+
+        // 判断一下是不是管理员发送的ENTER信令
+        if (meetingProcess.getHoldUserId().equals(userId)) {
+            meetingProcess.setHoldUserSessionId(currentSessionId);
+        }
+        // 将用户加入会议中
+        meetingProcess.getMeetingMembers().add(meetingMember);
+        meetingProcessUtil.cacheMeetingProcess(meetingProcess);
+        // 给其他成员发送enter信息
+        meetingProcess.getMeetingMembers().forEach(member -> {
+            if(!member.equals(meetingMember)){
+                SignalDealWebSocketHandler.sendMessage(JSONObject.toJSONString(enterInfo),member.getSessionId());
+            }
+        });
+    }
+
+    private void dealJoinResolve(WebSocketSession session, String message) {
+        // 把消息转发即可
+        JoinResolve joinResolve = JSONObject.parseObject(message, JoinResolve.class);
+        String targetSessionId = joinResolve.getTargetSessionId();
+        // 把joinReject消息转发即可
+        SignalDealWebSocketHandler.sendMessage(JSONObject.toJSONString(joinResolve), targetSessionId);
+    }
+
+    /**
+     * 处理JOIN_REJECT信令
+     * @param session
+     * @param message
+     */
+    private void dealJoinReject(WebSocketSession session, String message) {
+        // 把消息转发即可
+        JoinReject joinReject = JSONObject.parseObject(message, JoinReject.class);
+        String targetSessionId = joinReject.getTargetSessionId();
+        // 把joinReject消息转发即可
+        SignalDealWebSocketHandler.sendMessage(JSONObject.toJSONString(joinReject), targetSessionId);
+    }
+
 
     /**
      * 处理JOIN信令
@@ -111,6 +202,7 @@ public class MeetingSignalHandler {
             log.error("meetingProcess is null,meetingId:{}", meetingId);
             return;
         }
+        R<SysUser> userInfoById = remoteUserService.getUserInfoById(userId, SecurityConstants.INNER);
         //校验当前用户是不是会议发起者
         if (meetingProcess.getHoldUserId().equals(userId)) {
             //如果是会议发起者则直接给发起者发消息
@@ -119,9 +211,13 @@ public class MeetingSignalHandler {
             if (!TicketUtil.verifyTicket(ticket, meetingId, meetingProcess.getHoldUserId(), userId)) {
                 newTicket = TicketUtil.createTicket(meetingId, meetingProcess.getHoldUserId(), userId);
             }
+
             JoinResolve resolve = new JoinResolve();
             resolve.setMeetingId(meetingId);
             resolve.setTicket(newTicket);
+            resolve.setUserId(userId);
+            resolve.setName(userInfoById.getData().getUserName());
+            resolve.setAvatar(userInfoById.getData().getAvatar());
             // 发送JOIN_RESOLVE信令
             SignalDealWebSocketHandler.sendMessage(JSONObject.toJSONString(resolve), currentSessionId);
             return;
@@ -130,6 +226,9 @@ public class MeetingSignalHandler {
         if (TicketUtil.verifyTicket(ticket, meetingId, meetingProcess.getHoldUserId(), userId)) {
             JoinResolve resolve = new JoinResolve();
             resolve.setMeetingId(meetingId);
+            resolve.setUserId(userId);
+            resolve.setName(userInfoById.getData().getUserName());
+            resolve.setAvatar(userInfoById.getData().getAvatar());
             // 发送JOIN_RESOLVE信令
             SignalDealWebSocketHandler.sendMessage(JSONObject.toJSONString(resolve), currentSessionId);
             return;
@@ -149,9 +248,13 @@ public class MeetingSignalHandler {
                     // 给会议管理员发送JOIN_CONFIRM信令
                     JoinConfirm joinConfirm = new JoinConfirm();
                     joinConfirm.setMeetingId(meetingId);
-                    joinConfirm.setName(userName);
+                    joinConfirm.setName(userInfoById.getData().getUserName());
+                    joinConfirm.setAvatar(userInfoById.getData().getAvatar());
                     joinConfirm.setSourceSessionId(currentSessionId);
                     joinConfirm.setSourceUserId(userId);
+                    joinConfirm.setUserId(userId);
+                    joinConfirm.setTargetSessionId(member.getSessionId());
+
                     SignalDealWebSocketHandler.sendMessage(JSONObject.toJSONString(joinConfirm), member.getSessionId());
                     return;
                 }
@@ -161,5 +264,9 @@ public class MeetingSignalHandler {
         JoinReject reject = new JoinReject();
         reject.setMeetingId(meetingId);
         SignalDealWebSocketHandler.sendMessage(JSONObject.toJSONString(reject), currentSessionId);
+    }
+
+    public void removeAllMemberFromMeetingProcess(Long userId) {
+        meetingProcessUtil.removeAllMemberFromMeetingProcess(userId);
     }
 }

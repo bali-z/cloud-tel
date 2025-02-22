@@ -8,6 +8,7 @@ import java.io.Serializable;
 @SuppressWarnings("ALL")
 @Data
 public class JoinConfirm extends MeetingSignal implements Serializable {
+    private Long userId;
 
     /**
      *  请求参会人姓名
