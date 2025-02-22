@@ -2,17 +2,22 @@ package com.ruoyi.system.service.impl;
 
 import com.ruoyi.common.core.domain.R;
 import com.ruoyi.common.core.exception.ServiceException;
+import com.ruoyi.common.core.pojo.MeetingProcess;
 import com.ruoyi.common.core.utils.StringUtils;
 import com.ruoyi.common.core.utils.ticket.TicketUtil;
 import com.ruoyi.common.redis.generator.SnowflakeIdGenerator;
+import com.ruoyi.common.redis.util.MeetingProcessUtil;
 import com.ruoyi.common.security.utils.SecurityUtils;
+import com.ruoyi.system.api.domain.SysUser;
 import com.ruoyi.system.domain.SysMeeting;
 import com.ruoyi.system.mapper.SysMeetingMapper;
 import com.ruoyi.system.service.ISysMeetingService;
+import com.ruoyi.system.service.ISysUserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 
 /**
@@ -26,6 +31,13 @@ import java.util.List;
 public class SysMeetingServiceImpl implements ISysMeetingService {
     @Autowired
     private SysMeetingMapper sysMeetingMapper;
+
+    @Autowired
+    private MeetingProcessUtil meetingProcessUtil;
+
+    @Autowired
+    private ISysUserService userService;
+
     /**
      * 雪花算法ID迭代器
      */
@@ -126,7 +138,21 @@ public class SysMeetingServiceImpl implements ISysMeetingService {
         if(currentTime.after(meeting.getPlanEndTime())){
             return R.fail("会议已经结束");
         }
-
+        // 暂存会议信息
+        if(null == meetingProcessUtil.getMeetingProcess(meetingId)) {
+            // 缓存会议信息
+            SysUser sysUser = userService.selectUserById(meeting.getHoldUserId());
+            MeetingProcess meetingProcess = new MeetingProcess();
+            meetingProcess.setMeetingId(meeting.getMeetingId());
+            meetingProcess.setHoldUserId(meeting.getHoldUserId());
+            meetingProcess.setName(sysUser.getUserName());
+            meetingProcess.setAvatarUrl(sysUser.getAvatar());
+            meetingProcess.setPlanStartTime(meeting.getPlanStartTime());
+            meetingProcess.setPlanEndTime(meeting.getPlanEndTime());
+            meetingProcess.setMeetingMembers(new HashSet<>());
+            // 暂存会议信息
+            meetingProcessUtil.cacheMeetingProcess(meetingProcess);
+        }
         // 如果当前用户就是会议发起人则直接给人家生成票据
         if(userId.equals(meeting.getHoldUserId())){
             return R.ok(TicketUtil.createTicket(meetingId,meeting.getHoldUserId(),userId));

@@ -1,6 +1,7 @@
 package com.ruoyi.common.redis.configure;
 
 import com.ruoyi.common.redis.generator.SnowflakeIdGenerator;
+import com.ruoyi.common.redis.util.MeetingProcessUtil;
 import org.springframework.boot.autoconfigure.AutoConfigureBefore;
 import org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration;
 import org.springframework.cache.annotation.CachingConfigurerSupport;
@@ -46,5 +47,10 @@ public class RedisConfig extends CachingConfigurerSupport
     public SnowflakeIdGenerator snowflakeIdGenerator() {
         // 配置 Worker ID 和 Datacenter ID
         return new SnowflakeIdGenerator(1, 1);
+    }
+
+    @Bean
+    public MeetingProcessUtil meetingProcessUtil() {
+        return new MeetingProcessUtil();
     }
 }

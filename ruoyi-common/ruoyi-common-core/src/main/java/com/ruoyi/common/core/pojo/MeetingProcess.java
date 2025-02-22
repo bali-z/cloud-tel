@@ -2,6 +2,7 @@ package com.ruoyi.common.core.pojo;
 
 import lombok.Data;
 
+import java.util.Date;
 import java.util.Objects;
 import java.util.Set;
 
@@ -32,8 +33,18 @@ public class MeetingProcess {
      *  会议发起人sessionId (用户发起者 ENTER后有)
      */
     private String holdUserSessionId;
+    /**
+     *  会议计划开始时间
+     */
+    private Date planStartTime;
+    /**
+     *  会议计划结束时间
+     */
+    private Date planEndTime;
 
-
+    /**
+     *  会议成员
+     */
     private Set<MeetingMember> meetingMembers;
 
     /**
