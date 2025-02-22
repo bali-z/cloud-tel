@@ -18,16 +18,15 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * @author dz
- * describe: 基于 spring 的websocket实现
+ *  websocket 信令处理
  */
 @SuppressWarnings("ALL")
 @Component
-public class SignalWebSocketHandler extends TextWebSocketHandler {
+public class SignalDealWebSocketHandler extends TextWebSocketHandler {
 
-    private static final Logger log = LoggerFactory.getLogger(SignalWebSocketHandler.class);
+    private static final Logger log = LoggerFactory.getLogger(SignalDealWebSocketHandler.class);
     /**
-     * 雪花算法生成器 用于生成 sessionId
+     *  雪花算法ID迭代器
      */
     @Autowired
     private SnowflakeIdGenerator snowflakeIdGenerator;
@@ -51,7 +50,7 @@ public class SignalWebSocketHandler extends TextWebSocketHandler {
     /**
      * 生成的 sessionId，连接建立完成后分配
      */
-    public static final String CURRENT_SESSION_ID_IN_WEBSOCKET_SESSION = "currentSessionId";
+    public static final String CURRENT_SESSION_ID_IN_WEBSOCKET_SESSION = "CURRENT_SESSION_ID_IN_WEBSOCKET_SESSION";
 
 
     /**
@@ -85,6 +84,7 @@ public class SignalWebSocketHandler extends TextWebSocketHandler {
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         String sessionId = snowflakeIdGenerator.nextId() + ":" + session.getId();
+        // 在sessiont添加生成的sessionId
         session.getAttributes().put(CURRENT_SESSION_ID_IN_WEBSOCKET_SESSION, sessionId);
         socketConnectionPool.put(sessionId, session);
         log.debug("连接建立成功 sessionId:{}", sessionId);
@@ -94,14 +94,6 @@ public class SignalWebSocketHandler extends TextWebSocketHandler {
 
     /**
      * OnMessage
-     * 所接受数据格式为 RtcR
-     * {
-     * code int,
-     * msg String,
-     * data T,
-     * signal SignalType
-     * }
-     *
      * @param session
      * @param message
      * @throws Exception
@@ -124,16 +116,14 @@ public class SignalWebSocketHandler extends TextWebSocketHandler {
     }
 
     /**
-     * 使用懒汉模式，获取锁
-     * todo: 锁的清理
-     *
-     * @param meetingId
+     *  获取资源锁
+     * @param resourceId
      * @return
      */
     public static Lock getLockByResourceId(String resourceId) {
         Lock lock = meetingLockPool.get(resourceId);
         if (null == lock) {
-            synchronized (SignalWebSocketHandler.class) {
+            synchronized (SignalDealWebSocketHandler.class) {
                 // 上锁成功，但有可能lock已经有了所以一定要没有才能new出来
                 if (null == lock) {
                     lock = new ReentrantLock();

@@ -24,7 +24,7 @@ public class AuthHandshakeInterceptor implements HandshakeInterceptor {
     public boolean beforeHandshake(ServerHttpRequest request, ServerHttpResponse response,
                                    WebSocketHandler wsHandler, Map<String, Object> attributes) throws Exception {
 
-        // 获取请求头并存储到 attributes 中
+        // 获取请求头并存储到 attributes
         String userKey = request.getHeaders().getFirst(SecurityConstants.USER_KEY);
         String userId = request.getHeaders().getFirst(SecurityConstants.DETAILS_USER_ID);
         String userName = request.getHeaders().getFirst(SecurityConstants.DETAILS_USERNAME);
@@ -32,7 +32,7 @@ public class AuthHandshakeInterceptor implements HandshakeInterceptor {
             log.error("Received an illegal websocket connection!");
             return false;
         }
-        // 当前连接用户存储到未来要建立的 Websocket attributes 中
+        // 当前连接用户存储到未来要建立的 Websocket attributes
         attributes.put(SecurityConstants.USER_KEY, userKey);
         attributes.put(SecurityConstants.DETAILS_USER_ID, userId);
         attributes.put(SecurityConstants.DETAILS_USERNAME, userName);
