@@ -10,6 +10,7 @@ import com.ruoyi.rtc.handler.SignalDealWebSocketHandler;
 import com.ruoyi.rtc.meeting.signal.*;
 import com.ruoyi.system.api.RemoteUserService;
 import com.ruoyi.system.api.domain.SysUser;
+import org.bouncycastle.jcajce.provider.symmetric.AES;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -94,6 +95,22 @@ public class MeetingSignalHandler {
                     dealEnter(session, message);
                     break;
                 }
+                case OFFER -> {
+                    dealOffer(session, message);
+                    break;
+                }
+                case ANSWER -> {
+                    dealAnswer(session, message);
+                    break;
+                }
+                case CANDIDATE -> {
+                    dealCandidate(session, message);
+                    break;
+                }
+                case HANG_UP -> {
+                    dealHangUp(session, message);
+                    break;
+                }
 
                 default -> {
                     log.error("undefined code error:{}", message);
@@ -105,6 +122,83 @@ public class MeetingSignalHandler {
         } catch (Exception e) {
             log.error("dealMessage error:{}", e.getMessage());
         }
+    }
+
+
+    /**
+     *  挂断
+     *  前端发送
+     *  {
+     *      "businessType": "MEETING",
+     *      "code": "HANG_UP",
+     *      "meetingId": "12212121121",
+     *      "sourceUserId": 1
+     *      "name": "ry",
+     *      "avatar": "https://gitee.com/dromara/ruoyi-vue-pro/raw/dev/src/assets/images/avatar.jpg"
+     *  }
+     * 后端转发：
+     *      相同数据
+     * @param session
+     * @param message
+     */
+    private void dealHangUp(WebSocketSession session, String message) {
+
+        HangUp hangUp = JSONObject.parseObject(message, HangUp.class);
+        String meetingId = hangUp.getMeetingId();
+        Long sourceUserId = hangUp.getSourceUserId();
+
+        MeetingProcess meetingProcess = meetingProcessUtil.getMeetingProcess(meetingId);
+        meetingProcess.getMeetingMembers().removeIf(member -> member.getUserId().equals(sourceUserId));
+
+        // 转发给其他人
+        meetingProcess.getMeetingMembers().forEach(member -> {
+            SignalDealWebSocketHandler.sendMessage(JSONObject.toJSONString(hangUp), member.getSessionId());
+        });
+    }
+
+    private void dealCandidate(WebSocketSession session, String message) {
+        Candidate candidate = JSONObject.parseObject(message, Candidate.class);
+        candidate.setSourceSessionId((String) session.getAttributes().get(CURRENT_SESSION_ID_IN_WEBSOCKET_SESSION));
+        String targetSessionId = candidate.getTargetSessionId();
+        SignalDealWebSocketHandler.sendMessage(JSONObject.toJSONString(candidate), targetSessionId);
+    }
+
+    private void dealAnswer(WebSocketSession session, String message) {
+        Answer answer = JSONObject.parseObject(message, Answer.class);
+        answer.setSourceSessionId((String) session.getAttributes().get(CURRENT_SESSION_ID_IN_WEBSOCKET_SESSION));
+        String targetSessionId = answer.getTargetSessionId();
+        SignalDealWebSocketHandler.sendMessage(JSONObject.toJSONString(answer), targetSessionId);
+    }
+
+
+    /**
+     *  前端发送
+     *      {
+     *          "businessType": "MEETING",
+     *          "code": "OFFER",
+     *          description:{},
+     *          "sourceSessionId": "xxxxxxxxxxxx",
+     *          "targetSessionId": "xxxxxxxxxxxx",
+     *
+     *      },
+     * 后端转发：
+     *      {
+     *          "businessType": "MEETING",
+     *          "code": "ANSWER",
+     *          "description":{},
+     *          "sourceSessionId": "xxxxxxxxxxxx",
+     *          "targetSessionId": "xxxxxxxxxxxx",
+     *
+     *      }
+     *
+     * @param session
+     * @param message
+     */
+    private void dealOffer(WebSocketSession session, String message) {
+        Offer offer = JSONObject.parseObject(message, Offer.class);
+        offer.setSourceSessionId((String) session.getAttributes().get(CURRENT_SESSION_ID_IN_WEBSOCKET_SESSION));
+        String targetSessionId = offer.getTargetSessionId();
+        SignalDealWebSocketHandler.sendMessage(JSONObject.toJSONString(offer), targetSessionId);
     }
 
 
