@@ -19,7 +19,7 @@ public class MeetingProcessUtil {
      * 根据会议ID获取会议进程信息
      */
     public MeetingProcess getMeetingProcess(String meetingId) {
-        return redisService.getCacheObject(MEETING_PROCESS_PREFIX + meetingId);
+        return redisService.getCacheObject(MEETING_PROCESS_PREFIX + meetingId, MeetingProcess.class);
     }
 
     /**
@@ -53,7 +53,7 @@ public class MeetingProcessUtil {
     public void removeAllMemberFromMeetingProcess(Long userId) {
         Collection<String> keys = redisService.keys(MEETING_PROCESS_PREFIX + "*");
         for (String key : keys) {
-            MeetingProcess meetingProcess = redisService.getCacheObject(key);
+            MeetingProcess meetingProcess = redisService.getCacheObject(key,MeetingProcess.class);
             meetingProcess.getMeetingMembers().removeIf(member -> member.getUserId().equals(userId));
             cacheMeetingProcess(meetingProcess);
         }

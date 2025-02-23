@@ -64,7 +64,7 @@ public class SysLoginService
             throw new ServiceException("用户名不在指定范围");
         }
         // IP黑名单校验
-        String blackStr = Convert.toStr(redisService.getCacheObject(CacheConstants.SYS_LOGIN_BLACKIPLIST));
+        String blackStr = Convert.toStr(redisService.getCacheObject(CacheConstants.SYS_LOGIN_BLACKIPLIST,String.class ));
         if (IpUtils.isMatchedIp(blackStr, IpUtils.getIpAddr()))
         {
             recordLogService.recordLogininfor(username, Constants.LOGIN_FAIL, "很遗憾，访问IP已被列入系统黑名单");
