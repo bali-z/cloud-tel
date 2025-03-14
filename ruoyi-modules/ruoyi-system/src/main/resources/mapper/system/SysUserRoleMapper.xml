@@ -16,35 +16,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 	<select id="countUserRoleByRoleId" resultType="Integer">
 	    select count(1) from sys_user_role where role_id=#{roleId}  
 	</select>
-	<select id="selectUserInfoByRoleIds" resultType="com.ruoyi.system.api.domain.SysUser">
-		select distinct
-		u.user_id as user_id,
-		u.dept_id as dept_id,
-		u.user_name as user_name,
-		u.nick_name as nick_name,
-		u.user_type as user_type,
-		u.email as email,
-		u.phonenumber as phonenumber,
-		u.sex as sex,
-		u.avatar as avatar,
-		u.password as password,
-		u.status as status,
-		u.del_flag as del_flag,
-		u.login_ip as login_ip,
-		u.login_date as login_date,
-		u.create_by as create_by,
-		u.create_time as create_time,
-		u.update_by as update_by,
-		u.update_time as update_time,
-		u.remark as remark
-		from sys_user u
-		left join sys_user_role ur on u.user_id = ur.user_id
-		where ur.role_id in
-		<foreach collection="roleIds" item="roleId" open="(" separator="," close=")">
-			#{roleId}
-		</foreach>
-	</select>
-
+	
 	<delete id="deleteUserRole" parameterType="Long">
  		delete from sys_user_role where user_id in
  		<foreach collection="array" item="userId" open="(" separator="," close=")">

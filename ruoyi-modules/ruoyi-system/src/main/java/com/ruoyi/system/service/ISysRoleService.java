@@ -3,7 +3,6 @@ package com.ruoyi.system.service;
 import java.util.List;
 import java.util.Set;
 import com.ruoyi.system.api.domain.SysRole;
-import com.ruoyi.system.api.domain.SysUser;
 import com.ruoyi.system.domain.SysUserRole;
 
 /**
@@ -171,11 +170,4 @@ public interface ISysRoleService
      * @return 结果
      */
     public int insertAuthUsers(Long roleId, Long[] userIds);
-
-    /**
-     *  根据角色Ids查询用户信息
-     * @param roleIds
-     * @return
-     */
-    List<SysUser> selectUserInfoByRoleIds(List<Long> roleIds);
 }
