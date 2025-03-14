@@ -36,26 +36,11 @@
         <poi.version>4.1.2</poi.version>
         <transmittable-thread-local.version>2.14.4</transmittable-thread-local.version>
         <lombok.version>1.18.36</lombok.version>
-        <flowable.version>6.8.0</flowable.version>
-        <hutool-all.version>5.8.5</hutool-all.version>
     </properties>
 
     <!-- 依赖声明 -->
     <dependencyManagement>
         <dependencies>
-
-            <dependency>
-                <groupId>cn.hutool</groupId>
-                <artifactId>hutool-all</artifactId>
-                <version>${hutool-all.version}</version>
-            </dependency>
-
-<!--            flowable -->
-            <dependency>
-                <groupId>org.flowable</groupId>
-                <artifactId>flowable-spring-boot-starter-process</artifactId>
-                <version>${flowable.version}</version>
-            </dependency>
 
             <!-- SpringCloud 微服务 -->
             <dependency>
